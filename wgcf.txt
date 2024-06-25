@@ -40,25 +40,28 @@ sleep 5
 echo | wf register
 wf generate
 p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
+v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf  | grep -Eo '([0-9a-fA-F:]+/[0-9]+)');
 uci batch <<E
-set network.w=interface
-set network.w.proto='wireguard'
-set network.w.private_key="$p"
-set network.w.addresses='172.16.0.2/32'
-set network.w.mtu='1200'
-add network wireguard_w
-set network.@wireguard_w[0]=wireguard_w
-set network.@wireguard_w[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='
-set network.@wireguard_w[0].allowed_ips='0.0.0.0/0'
-set network.@wireguard_w[0].route_allowed_ips='1'
-set network.@wireguard_w[0].endpoint_host='engage.cloudflareclient.com'
-set network.@wireguard_w[0].endpoint_port='2408'
-set network.@wireguard_w[0].persistent_keepalive='0'
+set network.wgcf=interface
+set network.wgcf.proto='wireguard'
+set network.wgcf.private_key='$p'
+set network.wgcf.addresses='172.16.0.2/32'
+add_list network.wgcf.addresses='$v'
+set network.wgcf.mtu='1200'
+add network wireguard_wgcf
+set network.@wireguard_wgcf[0]=wireguard_wgcf
+set network.@wireguard_wgcf[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='
+set network.@wireguard_wgcf[0].allowed_ips='0.0.0.0/0'
+add_list network.@wireguard_wgcf[0].allowed_ips='::/0'
+set network.@wireguard_wgcf[0].route_allowed_ips='1'
+set network.@wireguard_wgcf[0].endpoint_host='engage.cloudflareclient.com'
+set network.@wireguard_wgcf[0].endpoint_port='2408'
+set network.@wireguard_wgcf[0].persistent_keepalive='0'
 commit
 E
 en=$(uci get firewall.@zone[1].network)
 for net in $en; do uci add_list firewall.@zone[1].network=$net; done
-uci add_list firewall.@zone[1].network=w
+uci add_list firewall.@zone[1].network=wgcf
 fi
 uci commit
 ifdown wan6 && sleep 5 && ifup wan6
