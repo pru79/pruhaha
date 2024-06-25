@@ -2,7 +2,7 @@ cat<<'i'>j
 if [ "$(cat /root/k)" != 1 ]&&[ "$(cat /root/l)" != 1 ];then
 clear
 echo "Setup will reboot, please reconnect terminal after reboot to resume WGCF setup"
-uci batch<<E
+uci batch <<E
 set profile.default.pdptype='IPV6'
 set profile.default.apn='hos'
 set profile.default.dns1='2606:4700:4700::64'
