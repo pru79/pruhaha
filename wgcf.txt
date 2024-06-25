@@ -1,137 +1,174 @@
-cat<<'i'>j
-if [ "$(cat /root/k)" != 1 ]&&[ "$(cat /root/l)" != 1 ];then
-clear
-echo "Setup will reboot, please reconnect terminal after reboot to resume WGCF setup"
-uci batch <<E
-set profile.default.pdptype='IPV6'
-set profile.default.apn='hos'
-set profile.default.dns1='2606:4700:4700::64'
-commit
-E
-echo "1">k;echo "0">l
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",2'
-echo "Rebooting Arcadyan.."
-sleep 10
-reboot
-else
-echo "1">l
-uci batch <<E
-set system.@system[0].zonename='Asia/Kuala Lumpur'
-set luci.main.lang='auto'
-delete system.ntp.server
-add_list system.ntp.server='my.pool.ntp.org'
-set network.wan.ifname='wwan0_1'
-set dhcp.lan.ndp='relay'
-dhcp.lan.dns='2606:4700:4700::1111
-set dhcp.@dnsmasq[0].server='/a.a/2606:4700:4700::1111'
-set dhcp.@dnsmasq[0].serversfile='server=2606:4700:4700::1111'
-commit
-E
-echo "Resuming WGCF setup, pls wait for 3 minutes.."
-while ! ping6 -c 1 2001:4860:4860::8888 >/dev/null 2>&1;
-do sleep 1; done
-echo "Let's goooo!"
-echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
-if ping6 -c 1 google.com >/dev/null 2>&1; then
-/etc/init.d/sysntpd restart
-wget --no-check-certificate https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_arm64 -O /bin/wgcf
-chmod a+x /bin/wgcf
-sleep 5
-echo | wgcf register
-wgcf generate
-p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
-v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf  | grep -Eo '([0-9a-fA-F:]+/[0-9]+)');
-uci batch <<E
-set network.wgcf=interface
-set network.wgcf.proto='wireguard'
-set network.wgcf.private_key='$p'
-set network.wgcf.addresses='172.16.0.2/32'
-add_list network.wgcf.addresses='$v'
-set network.wgcf.mtu='1200'
-add network wireguard_wgcf
-set network.@wireguard_wgcf[0]=wireguard_wgcf
-set network.@wireguard_wgcf[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='
-set network.@wireguard_wgcf[0].allowed_ips='0.0.0.0/0'
-add_list network.@wireguard_wgcf[0].allowed_ips='::/0'
-set network.@wireguard_wgcf[0].route_allowed_ips='1'
-set network.@wireguard_wgcf[0].endpoint_host='engage.cloudflareclient.com'
-set network.@wireguard_wgcf[0].endpoint_port='2408'
-set network.@wireguard_wgcf[0].persistent_keepalive='0'
-commit
-E
-en=$(uci get firewall.@zone[1].network)
-for net in $en; do uci add_list firewall.@zone[1].network=$net; done
-uci add_list firewall.@zone[1].network=wgcf
-fi
-uci commit
-ifdown wan6 && sleep 5 && ifup wan6
-while ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; do sleep 1; done
-cat <<'E' >/bin/rewg
-n=0
-m=0
-/etc/init.d/watchcat stop
-while [ $n -le 1 ]; do
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 AT+CFUN=0 >/dev/null 2>&1 &&
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CGDCONT=1,\"IPV6\",\"hos\"" >/dev/null 2>&1 &&
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 AT+CFUN=1 >/dev/null 2>&1 &&
-ifup wan && ifup wan1
-sleep 30
-ping -c 3 8.8.8.8
-[ $? -eq 0 ] && /etc/init.d/watchcat start && /etc/init.d/watchcat enable && exit 0
-n=$((n+1))
-done
-while [ $m -le 1 ]; do
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CFUN=1,1"
-ifup wan && ifup wan1
-sleep 90
-ping -c 3 8.8.8.8
-[ $? -eq 0 ] && /etc/init.d/watchcat start && /etc/init.d/watchcat enable && exit 0
-m=$((m+1))
-done
-echo 1 > /proc/sys/kernel/sysrq
-echo b > /proc/sysrq-trigger
-E
-chmod +x /bin/rewg
-echo -e "search lan\nnameserver 127.0.0.1" >/etc/resolv.conf
-wget https://downloads.immortalwrt.org/releases/23.05.2/packages/aarch64_cortex-a53/packages/watchcat_1-17_all.ipk -O /tmp/wc.ipk
-opkg install /tmp/wc.ipk
-uci batch <<E
-set watchcat.@watchcat[0].period='30s'
-set watchcat.@watchcat[0].mode='run_script'
-set watchcat.@watchcat[0].pinghosts='1.1.1.1'
-set watchcat.@watchcat[0].addressfamily='ipv4'
-set watchcat.@watchcat[0].pingperiod='6s'
-set watchcat.@watchcat[0].script='/bin/rewg'
-commit watchcat
-E
-/etc/init.d/watchcat start
-/etc/init.d/watchcat enable
-rm /tmp/wc.ipk
-cat <<'E' >/bin/wcmon
 #!/bin/sh
-/etc/init.d/watchcat stop && /etc/init.d/watchcat disable
-while true; do
-curl -s --head http://example.com | grep "200 OK" > /dev/null && /etc/init.d/watchcat start && /etc/init.d/watchcat enable
-sleep 60
-done
+
+# Check conditions from files 'k' and 'l'
+if [ "$(cat /root/k)" != 1 ] && [ "$(cat /root/l)" != 1 ]; then
+    clear
+    echo "Setup will reboot, please reconnect terminal after reboot to resume WGCF setup"
+    
+    # Modify uci settings
+    uci batch <<E
+    set profile.default.pdptype='IPV6'
+    set profile.default.apn='hos'
+    set profile.default.dns1='2606:4700:4700::64'
+    commit
 E
-chmod a+x /bin/wcmon
-/bin/wcmon&
-sed -i '/exit 0/i /bin/wcmon&' /etc/rc.local
-echo "WGCF siyyyyaap! You may close this terminal now"
-echo .
-ping 1.1.1.1
-echo .
-fi
-i
-chmod a+x j
-cat<<'h'>.profile
-#!/bin/sh
-if [ "$(cat l)" == 0 ] &&[ "$(cat k)" == 1 ]; then
-./j
+
+    # Update files 'k' and 'l'
+    echo "1" > /root/k
+    echo "0" > /root/l
+
+    # Run specific commands
+    /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",2'
+    echo "Rebooting Arcadyan.."
+    sleep 10
+    reboot
 else
-break
+    # If conditions are not met, continue with setup
+    echo "1" > /root/l
+    
+    # Modify uci settings for networking
+    uci batch <<E
+    set system.@system[0].zonename='Asia/Kuala Lumpur'
+    set luci.main.lang='auto'
+    delete system.ntp.server
+    add_list system.ntp.server='my.pool.ntp.org'
+    set network.wan.ifname='wwan0_1'
+    set dhcp.lan.ndp='relay'
+    dhcp.lan.dns='2606:4700:4700::1111'
+    set dhcp.@dnsmasq[0].server='/a.a/2606:4700:4700::1111'
+    set dhcp.@dnsmasq[0].serversfile='server=2606:4700:4700::1111'
+    commit
+E
+
+    echo "Resuming WGCF setup, please wait for 3 minutes.."
+
+    # Wait until IPv6 connection is established
+    while ! ping6 -c 1 2001:4860:4860::8888 >/dev/null 2>&1; do
+        sleep 1
+    done
+
+    echo "Let's goooo!"
+    echo "nameserver 2a00:1098:2b::1" > /etc/resolv.conf
+
+    # Check IPv6 connectivity to google.com
+    if ping6 -c 1 google.com >/dev/null 2>&1; then
+        /etc/init.d/sysntpd restart
+        wget --no-check-certificate https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_arm64 -O /bin/wgcf
+        chmod a+x /bin/wgcf
+        sleep 5
+        echo | wgcf register
+        wgcf generate
+
+        # Extract PrivateKey and Address from 'wgcf-profile.conf'
+        p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
+        v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
+
+        # Configure WireGuard interface using uci
+        uci batch <<E
+        set network.wgcf=interface
+        set network.wgcf.proto='wireguard'
+        set network.wgcf.private_key='$p'
+        set network.wgcf.addresses='172.16.0.2/32'
+        add_list network.wgcf.addresses='$v'
+        set network.wgcf.mtu='1200'
+        add network wireguard_wgcf
+        set network.@wireguard_wgcf[0]=wireguard_wgcf
+        set network.@wireguard_wgcf[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='
+        set network.@wireguard_wgcf[0].allowed_ips='0.0.0.0/0'
+        add_list network.@wireguard_wgcf[0].allowed_ips='::/0'
+        set network.@wireguard_wgcf[0].route_allowed_ips='1'
+        set network.@wireguard_wgcf[0].endpoint_host='engage.cloudflareclient.com'
+        set network.@wireguard_wgcf[0].endpoint_port='2408'
+        set network.@wireguard_wgcf[0].persistent_keepalive='0'
+        commit
+E
+
+        # Add 'wgcf' to firewall zone network
+        en=$(uci get firewall.@zone[1].network)
+        for net in $en; do
+            uci add_list firewall.@zone[1].network=$net
+        done
+        uci add_list firewall.@zone[1].network=wgcf
+    fi
+
+    # Commit uci changes and restart WAN6 interface
+    uci commit
+    ifdown wan6 && sleep 5 && ifup wan6
+
+    # Wait until WAN connectivity is restored
+    while ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; do
+        sleep 1
+    done
+
+    # Create script 'rewg' for WAN recovery
+    cat <<'E' >/bin/rewg
+    n=0
+    m=0
+    /etc/init.d/watchcat stop
+    while [ $n -le 1 ]; do
+        /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 AT+CFUN=0 >/dev/null 2>&1 &&
+        /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CGDCONT=1,\"IPV6\",\"hos\"" >/dev/null 2>&1 &&
+        /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 AT+CFUN=1 >/dev/null 2>&1 &&
+        ifup wan && ifup wan1
+        sleep 30
+        ping -c 3 8.8.8.8
+        [ $? -eq 0 ] && /etc/init.d/watchcat start && /etc/init.d/watchcat enable && exit 0
+        n=$((n+1))
+    done
+    while [ $m -le 1 ]; do
+        /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CFUN=1,1"
+        ifup wan && ifup wan1
+        sleep 90
+        ping -c 3 8.8.8.8
+        [ $? -eq 0 ] && /etc/init.d/watchcat start && /etc/init.d/watchcat enable && exit 0
+        m=$((m+1))
+    done
+    echo 1 > /proc/sys/kernel/sysrq
+    echo b > /proc/sysrq-trigger
+E
+
+    chmod +x /bin/rewg
+
+    # Modify 'resolv.conf' for DNS settings
+    echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
+
+    # Install and configure 'watchcat'
+    wget https://downloads.immortalwrt.org/releases/23.05.2/packages/aarch64_cortex-a53/packages/watchcat_1-17_all.ipk -O /tmp/wc.ipk
+    opkg install /tmp/wc.ipk
+    uci batch <<E
+    set watchcat.@watchcat[0].period='30s'
+    set watchcat.@watchcat[0].mode='run_script'
+    set watchcat.@watchcat[0].pinghosts='1.1.1.1'
+    set watchcat.@watchcat[0].addressfamily='ipv4'
+    set watchcat.@watchcat[0].pingperiod='6s'
+    set watchcat.@watchcat[0].script='/bin/rewg'
+    commit watchcat
+E
+
+    /etc/init.d/watchcat start
+    /etc/init.d/watchcat enable
+
+    rm /tmp/wc.ipk
+
+    # Create 'wcmon' script for continuous monitoring
+    cat <<'E' >/bin/wcmon
+    #!/bin/sh
+    /etc/init.d/watchcat stop && /etc/init.d/watchcat disable
+    while true; do
+        curl -s --head http://example.com | grep "200 OK" > /dev/null && /etc/init.d/watchcat start && /etc/init.d/watchcat enable
+        sleep 60
+    done
+E
+
+    chmod a+x /bin/wcmon
+    /bin/wcmon &
+
+    # Add 'wcmon' to '/etc/rc.local' for automatic startup
+    sed -i '/exit 0/i /bin/wcmon &' /etc/rc.local
+
+    echo "WGCF setup complete! You may close this terminal now."
+    echo .
+    ping 1.1.1.1
+    echo .
 fi
-h
-./j
-#
+
