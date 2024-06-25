@@ -6,7 +6,7 @@ if [ "$(cat /root/k)" != 1 ] && [ "$(cat /root/l)" != 1 ]; then
     echo "Setup will reboot, please reconnect terminal after reboot to resume WGCF setup"
     
     # Modify uci settings
-    uci batch <<E
+    uci batch <<'E'
     set profile.default.pdptype='IPV6'
     set profile.default.apn='hos'
     set profile.default.dns1='2606:4700:4700::64'
@@ -27,14 +27,14 @@ else
     echo "1" > /root/l
     
     # Modify uci settings for networking
-    uci batch <<E
+    uci batch <<'E'
     set system.@system[0].zonename='Asia/Kuala Lumpur'
     set luci.main.lang='auto'
     delete system.ntp.server
     add_list system.ntp.server='my.pool.ntp.org'
     set network.wan.ifname='wwan0_1'
     set dhcp.lan.ndp='relay'
-    dhcp.lan.dns='2606:4700:4700::1111'
+    set dhcp.lan.dns='2606:4700:4700::1111'
     set dhcp.@dnsmasq[0].server='/a.a/2606:4700:4700::1111'
     set dhcp.@dnsmasq[0].serversfile='server=2606:4700:4700::1111'
     commit
@@ -64,7 +64,7 @@ E
         v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
 
         # Configure WireGuard interface using uci
-        uci batch <<E
+        uci batch <<'E'
         set network.wgcf=interface
         set network.wgcf.proto='wireguard'
         set network.wgcf.private_key='$p'
@@ -135,7 +135,7 @@ E
     # Install and configure 'watchcat'
     wget https://downloads.immortalwrt.org/releases/23.05.2/packages/aarch64_cortex-a53/packages/watchcat_1-17_all.ipk -O /tmp/wc.ipk
     opkg install /tmp/wc.ipk
-    uci batch <<E
+    uci batch <<'E'
     set watchcat.@watchcat[0].period='30s'
     set watchcat.@watchcat[0].mode='run_script'
     set watchcat.@watchcat[0].pinghosts='1.1.1.1'
@@ -171,4 +171,3 @@ E
     ping 1.1.1.1
     echo .
 fi
-
