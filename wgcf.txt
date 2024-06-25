@@ -1,7 +1,7 @@
 cat<<'i'>j
 if [ "$(cat /root/k)" != 1 ]&&[ "$(cat /root/l)" != 1 ];then
 clear
-echo "Pls reconnect terminal after reboot to cont setup"
+echo "Setup will reboot, please reconnect terminal after reboot to resume WGCF setup"
 uci batch<<E
 set profile.default.pdptype='IPV6'
 set profile.default.apn='hos'
@@ -10,7 +10,7 @@ commit
 E
 echo "1">k;echo "0">l
 /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",2'
-echo "Sayonara.."
+echo "Rebooting Arcadyan.."
 sleep 10
 reboot
 else
@@ -27,18 +27,18 @@ set dhcp.@dnsmasq[0].server='/a.a/2606:4700:4700::1111'
 set dhcp.@dnsmasq[0].serversfile='server=2606:4700:4700::1111'
 commit
 E
-echo "Cont in 3min"
+echo "Resuming WGCF setup, pls wait for 3 minutes.."
 while ! ping6 -c 1 2001:4860:4860::8888 >/dev/null 2>&1;
-do sleep 1;done
-echo "Jom!"
+do sleep 1; done
+echo "Let's goooo!"
 echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
 if ping6 -c 1 google.com >/dev/null 2>&1; then
 /etc/init.d/sysntpd restart
-wget --no-check-certificate https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_arm64 -O /bin/wf
-chmod a+x /bin/wf
+wget --no-check-certificate https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_arm64 -O /bin/wgcf
+chmod a+x /bin/wgcf
 sleep 5
-echo | wf register
-wf generate
+echo | wgcf register
+wgcf generate
 p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
 v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf  | grep -Eo '([0-9a-fA-F:]+/[0-9]+)');
 uci batch <<E
@@ -66,7 +66,7 @@ fi
 uci commit
 ifdown wan6 && sleep 5 && ifup wan6
 while ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; do sleep 1; done
-cat <<'E' >/bin/rg
+cat <<'E' >/bin/rewg
 n=0
 m=0
 /etc/init.d/watchcat stop
@@ -91,23 +91,23 @@ done
 echo 1 > /proc/sys/kernel/sysrq
 echo b > /proc/sysrq-trigger
 E
-chmod +x /bin/rg
-echo "nameserver 127.0.0.1" >/etc/resolv.conf
-wget https://downloads.immortalwrt.org/releases/23.05.2/packages/aarch64_cortex-a53/packages/watchcat_1-17_all.ipk -O /tmp/c.ipk
-opkg install /tmp/c.ipk
+chmod +x /bin/rewg
+echo -e "search lan\nnameserver 127.0.0.1" >/etc/resolv.conf
+wget https://downloads.immortalwrt.org/releases/23.05.2/packages/aarch64_cortex-a53/packages/watchcat_1-17_all.ipk -O /tmp/wc.ipk
+opkg install /tmp/wc.ipk
 uci batch <<E
 set watchcat.@watchcat[0].period='30s'
 set watchcat.@watchcat[0].mode='run_script'
 set watchcat.@watchcat[0].pinghosts='1.1.1.1'
 set watchcat.@watchcat[0].addressfamily='ipv4'
 set watchcat.@watchcat[0].pingperiod='6s'
-set watchcat.@watchcat[0].script='/bin/rg'
+set watchcat.@watchcat[0].script='/bin/rewg'
 commit watchcat
 E
 /etc/init.d/watchcat start
 /etc/init.d/watchcat enable
-rm /tmp/c.ipk
-cat <<'E' >/bin/m
+rm /tmp/wc.ipk
+cat <<'E' >/bin/wcmon
 #!/bin/sh
 /etc/init.d/watchcat stop && /etc/init.d/watchcat disable
 while true; do
@@ -115,10 +115,10 @@ curl -s --head http://example.com | grep "200 OK" > /dev/null && /etc/init.d/wat
 sleep 60
 done
 E
-chmod a+x /bin/m
-/bin/m&
-sed -i '/exit 0/i /bin/m&' /etc/rc.local
-echo -e "\n\nWGCF siyyyap!\n\n"
+chmod a+x /bin/wcmon
+/bin/wcmon&
+sed -i '/exit 0/i /bin/wcmon&' /etc/rc.local
+echo "WGCF siyyyyaap! You may close this terminal now"
 echo .
 ping 1.1.1.1
 echo .
