@@ -1,0 +1,973 @@
+<%+header%>
+<%
+local fs = require "nixio.fs"
+nosms = 1
+if not fs.stat("/etc/nosim") then
+	nosms = 0
+end
+havegps = 0
+if fs.stat("/etc/havegps") then
+	havegps = 1
+end
+-%>
+<style>
+	g {
+		color:grey;
+		font-size:75%;
+		vertical-align: super;
+	}
+	progress {
+		width: 95%;
+		height: 20px;
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	progress[value]::-webkit-progress-bar {
+		background-color: #eee;
+		border-radius: 5px;
+	}
+
+	progress[value]::-webkit-progress-value {
+		border-radius: 5px;
+		transition: width 0.2s ease;
+		background-color: var(--progress-bar-color);
+	}
+
+	progress[value]::-moz-progress-bar {
+		border-radius: 5px;
+		transition: width 0.2s ease;
+		background-color: var(--progress-bar-color);
+	}
+</style>
+<script type="text/javascript" src="<%=resource%>/xhr.js"></script>
+<script type="text/javascript">//<![CDATA[
+
+	modemtype=0;
+	cell=0;
+	portx="-";
+	phonenx = "";
+	hided = 0;
+
+	
+	function updateSignalStrengthProgress(value) {
+		let progressBar = document.getElementById('signal-strength-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: signal-strength-progress');
+			return;
+		}
+		progressBar.value = value;
+
+		if (value <= 25) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value <= 50) {
+			progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value <= 79) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value >= 80) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function normalizeRSSI(value) {
+		const minRSSI = -110;
+		const maxRSSI = -50;
+
+		// Clamping the RSSI value to the min and max range
+		if (value > maxRSSI) { value = maxRSSI; }
+		if (value < minRSSI) { value = minRSSI; }
+
+		// Normalizing the value to a percentage (0-100)
+		return Math.floor(100 * (1 - (maxRSSI - value) / (maxRSSI - minRSSI)));
+	}
+
+	function updateRSSIProgress(value) {
+		let progressBar = document.getElementById('rssi-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: rssi-progress');
+			return;
+		}
+		const normalizedValue = normalizeRSSI(value);
+		progressBar.value = normalizedValue;
+
+		if (value <= -100) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value >= -100 && value <= -86) {
+			progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value >= -85 && value <= -70) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value > -70) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function normalizeRSRQ(value) {
+		const minRSRQ = -20; // Adjust based on actual expected range
+		const maxRSRQ = 0;  // Adjust based on actual expected range
+
+		// Clamping the RSRQ value to the min and max range
+		if (value > maxRSRQ) { value = maxRSRQ; }
+		if (value < minRSRQ) { value = minRSRQ; }
+
+		// Normalizing the value to a percentage (0-100)
+		return Math.floor(100 * (value - minRSRQ) / (maxRSRQ - minRSRQ));
+		}
+
+		function normalizeRSRQ(value) {
+		const minRSRQ = -20; // Adjust based on actual expected range
+		const maxRSRQ = -3;  // Adjust based on actual expected range
+
+		// Clamping the RSRQ value to the min and max range
+		if (value > maxRSRQ) { value = maxRSRQ; }
+		if (value < minRSRQ) { value = minRSRQ; }
+
+		// Normalizing the value to a percentage (0-100)
+		return Math.floor(100 * (value - minRSRQ) / (maxRSRQ - minRSRQ));
+	}
+
+	function updateRSRQProgress(value) {
+		let progressBar = document.getElementById('rsrq-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: rsrq-progress');
+			return;
+		}
+
+		const normalizedValue = normalizeRSRQ(value);
+		progressBar.value = normalizedValue;
+
+		if (value < -20) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value <= -14) {
+			progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value <= -9) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value >= -10) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function updateSSRSRQProgress(value) {
+		let progressBar = document.getElementById('ssrsrq-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: ssrsrq-progress');
+			return;
+		}
+
+		const normalizedValue = normalizeRSRQ(value);
+		progressBar.value = normalizedValue;
+
+		if (value < -20) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value <= -14) {
+				progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value <= -9) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value >= -10) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function updateSignalValues(data) {
+		const ecioMatch = data.match(/(-?\d+)\s*\(4G\)/);
+		const ssrsrqMatch = data.match(/(-?\d+)\s*\(5G\)/);
+		const singleValueMatch = data.match(/(-?\d+)/);
+
+		let ecioValue = null;
+		let ssrsrqValue = null;
+
+		if (ecioMatch && ecioMatch[1]) {
+			ecioValue = parseInt(ecioMatch[1]);
+		}
+		if (ssrsrqMatch && ssrsrqMatch[1]) {
+			ssrsrqValue = parseInt(ssrsrqMatch[1]);
+		}
+		if (!ecioMatch && singleValueMatch && singleValueMatch[1]) {
+			ecioValue = parseInt(singleValueMatch[1]);
+		}
+
+		return { ecioValue, ssrsrqValue};
+	}
+	function normalizeRSRP(value) {
+		const minRSRP = -120; // Adjust based on actual expected range
+		const maxRSRP = -60;  // Adjust based on actual expected range
+
+		// Clamping the RSRP value to the min and max range
+		if (value > maxRSRP) { value = maxRSRP; }
+		if (value < minRSRP) { value = minRSRP; }
+
+		// Normalizing the value to a percentage (0-100)
+		return Math.floor(100 * (value - minRSRP) / (maxRSRP - minRSRP));
+	}
+
+	function updateRSRPProgress(value) {
+		let progressBar = document.getElementById('rscp-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: rscp-progress');
+			return;
+		}
+
+		const normalizedValue = normalizeRSRP(value);
+		progressBar.value = normalizedValue;
+
+		if (value < -110) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value <= -100) {
+			progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value <= -90) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value > -90) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function updateSSRSRPProgress(value) {
+		let progressBar = document.getElementById('ssrsrp-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: ssrsrp-progress');
+			return;
+		}
+
+		const normalizedValue = normalizeRSRP(value);
+		progressBar.value = normalizedValue;
+
+		if (value < -110) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value <= -100) {
+			progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value <= -90) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value > -90) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function parseRSCPData(data) {
+		// Handle data format for 4G and 5G
+		const parts = data.split('<br />');
+		const rscpMatch = parts[0].match(/-?\d+/);
+		const ssrsrpMatch = parts.length > 1 ? parts[1].match(/-?\d+/) : null;
+
+		let rscpValue = null;
+		let ssrsrpValue = null;
+
+		if (rscpMatch) {
+			rscpValue = parseInt(rscpMatch[0]);
+		}
+		if (ssrsrpMatch) {
+			ssrsrpValue = parseInt(ssrsrpMatch[0]);
+		}
+
+		return { rscpValue, ssrsrpValue };
+	}
+
+	function normalizeSINR(value) {
+		const minSINR = -20; // Adjust based on actual expected range
+		const maxSINR = 30;  // Adjust based on actual expected range
+
+		// Clamping the SINR value to the min and max range
+		if (value > maxSINR) { value = maxSINR; }
+		if (value < minSINR) { value = minSINR; }
+
+		// Normalizing the value to a percentage (0-100)
+		return Math.floor(100 * (value - minSINR) / (maxSINR - minSINR));
+	}	
+
+	function updateSINRProgress(value) {
+		let progressBar = document.getElementById('sinr-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: sinr-progress');
+			return;
+		}
+
+		const normalizedValue = normalizeSINR(value);
+		progressBar.value = normalizedValue;
+
+		if (value < -10) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value <= 0) {
+			progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value <= 10) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value > 10) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function updateSSSINRProgress(value) {
+		let progressBar = document.getElementById('sssinr-progress');
+		if (!progressBar) {
+			console.error('Progress bar element not found: sssinr-progress');
+			return;
+		}
+
+		const normalizedValue = normalizeSINR(value);
+		progressBar.value = normalizedValue;
+
+		if (value < -10) {
+			progressBar.style.setProperty('--progress-bar-color', 'red');
+		} else if (value <= 0) {
+			progressBar.style.setProperty('--progress-bar-color', 'darkorange');
+		} else if (value <= 10) {
+			progressBar.style.setProperty('--progress-bar-color', 'yellow');
+		} else if (value > 10) {
+			progressBar.style.setProperty('--progress-bar-color', 'lime');
+		}
+	}
+
+	function parseSINRData(data) {
+		// Split the data on '<br />' to separate 4G and 5G SINR values
+		const parts = data.split('<br />');
+		
+		// Match the SINR value for 4G
+		const sinrMatch = parts[0].match(/-?\d+/);
+		
+		// Match the SINR value for 5G, if it exists
+		const sssinrMatch = parts.length > 1 ? parts[1].match(/-?\d+/) : null;
+
+		let sinrValue = null;
+		let sssinrValue = null;
+
+		if (sinrMatch) {
+			sinrValue = parseInt(sinrMatch[0]);
+		}
+		if (sssinrMatch) {
+			sssinrValue = parseInt(sssinrMatch[0]);
+		}
+
+		return { sinrValue, sssinrValue };
+	}
+
+	XHR.poll(2, '<%=luci.dispatcher.build_url("admin", "modem", "get_csq")%>', null,
+		function(x, rv)
+		{
+			document.getElementById('port').innerHTML=rv.port;
+			document.getElementById('csq').innerHTML=rv.csq;
+			// Signal Strength update
+			document.getElementById('per').innerHTML = rv.per;
+			updateSignalStrengthProgress(parseInt(rv.per));
+			// RSSI Strength update
+			document.getElementById('rssi').innerHTML = rv.rssi;
+			updateRSSIProgress(parseInt(rv.rssi));
+			document.getElementById('modem').innerHTML=rv.modem;
+			document.getElementById('cops').innerHTML=rv.cops;
+			document.getElementById('mode').innerHTML=rv.mode;
+			document.getElementById('lac').innerHTML=rv.lac;
+			document.getElementById('cid').innerHTML=rv.cid;
+			document.getElementById('lacn').innerHTML=rv.lacn;
+			document.getElementById('cidn').innerHTML=rv.cidn;
+			document.getElementById('mcc').innerHTML=rv.mcc;
+			document.getElementById('mnc').innerHTML=rv.mnc;
+			document.getElementById('rnc').innerHTML=rv.rnc;
+			document.getElementById('rncn').innerHTML=rv.rncn;
+			document.getElementById('down').innerHTML=rv.down;
+			document.getElementById('up').innerHTML=rv.up;
+			// Extract and update ECIO and SS_RSRQ values
+			const signalValues = updateSignalValues(rv.ecio);
+			const ecioValue = signalValues.ecioValue;
+			const ssrsrqValue = signalValues.ssrsrqValue;
+
+			document.getElementById('ecio').innerHTML = ecioValue + ' dB (4G)';
+			updateRSRQProgress(ecioValue);
+
+			if (ssrsrqValue !== null) {
+				document.getElementById('ssrsrq').innerHTML = ssrsrqValue + ' dB (5G)';
+				updateSSRSRQProgress(ssrsrqValue);
+			} else {
+				document.getElementById('ssrsrq').innerHTML = "No Signal (5G)";
+			}
+
+			const { rscpValue, ssrsrpValue } = parseRSCPData(rv.rscp); // Parse the RSCP and SSRSRP data
+
+			if (rscpValue !== null) {
+				document.getElementById('rscp').innerHTML = rscpValue + ' dBm';
+				updateRSRPProgress(rscpValue);
+			} else {
+				document.getElementById('rscp').innerHTML = "No Signal (4G)";
+			}
+
+			if (ssrsrpValue !== null) {
+				document.getElementById('ssrsrp').innerHTML = ssrsrpValue + ' dBm';
+				updateSSRSRPProgress(ssrsrpValue);
+			} else {
+				document.getElementById('ssrsrp').innerHTML = "No Signal (5G)";
+			}
+			document.getElementById('conntype').innerHTML=rv.conntype;
+			document.getElementById('chan').innerHTML=rv.channel;
+			document.getElementById('lband').innerHTML=rv.lband;
+			document.getElementById('conmon').innerHTML=rv.netmode;
+			document.getElementById('tempur').innerHTML=rv.tempur;
+			document.getElementById('proto').innerHTML=rv.proto;
+			document.getElementById('pci').innerHTML=rv.pci;
+			// SINR update
+			const { sinrValue, sssinrValue } = parseSINRData(rv.sinr); // Parse the SINR values
+			if (sinrValue !== null) {
+				document.getElementById('sinr').innerHTML = rv.sinr.split('<br />')[0]; // Keep the original 4G SINR text
+				updateSINRProgress(sinrValue);
+			} else {
+				document.getElementById('sinr').innerHTML = "No Signal (4G)";
+			}
+
+			if (sssinrValue !== null) {
+				document.getElementById('sssinr').innerHTML = sssinrValue + ' dB';
+				updateSSSINRProgress(sssinrValue);
+			} else {
+				document.getElementById('sssinr').innerHTML = "No Signal";
+			}
+
+			<% if havegps == 1 then %>
+			document.getElementById('lat').innerHTML=rv.lat;
+			document.getElementById('long').innerHTML=rv.long;
+			<% end %>
+
+			document.getElementById('crate').innerHTML=rv.crate;
+			if (phonenx == "")
+			{
+				document.getElementById('phone').value=rv.phone;
+				document.getElementById('phonen').value=rv.phonen;
+				phonenx = document.getElementById('phone').value;
+				document.getElementById("phone").disabled=false;
+				document.getElementById("phonen").disabled=false;
+				document.getElementById("pho").disabled=false;
+			}
+
+			if (rv.phone == "-")
+			{
+				document.getElementById('phone').value="-";
+				document.getElementById('phonen').value="-";
+				document.getElementById("pho").disabled=true;
+				document.getElementById("phone").disabled=true;
+				document.getElementById("phonen").disabled=true;
+				phonenx = "";
+			}
+			
+			simerr = rv.simerr;
+			if (simerr == "0")
+			{
+				document.getElementById("simwarn").style.display="none";
+			}
+			else
+			{
+				document.getElementById("simwarn").style.display="block";
+				document.getElementById("simsg").style.color = "red";
+				if (simerr == "1")
+				{
+					document.getElementById("simsg").innerHTML = "<%:SIM is locked with no SIM Pin entered in Profile!!%>";
+				}
+				else
+				{
+					if (simerr == "2")
+					{
+						document.getElementById("simsg").innerHTML = "<%:Incorrect Pin to Unlock SIM%>";
+					}
+					else
+					{
+						if (simerr == "3")
+						{
+							document.getElementById("simsg").innerHTML = "<%:SIM is Missing%>";
+						} else
+						{
+							document.getElementById("simsg").innerHTML = "<%:SIM is not locked. Incorrect SIM%>";
+						}
+					}
+				}
+			}
+
+			reslt=rv.result
+
+			portx=rv.port
+			if (portx == "-" )
+			{
+				document.getElementById('inc1').style.display="none";
+				document.getElementById('dec1').style.display="none";
+			}
+			else
+			{
+				document.getElementById('inc1').style.display="block";
+				document.getElementById('dec1').style.display="block";
+			}
+			document.getElementById('idvp').innerHTML=rv.modid;
+			document.getElementById('imei').innerHTML=rv.imei;
+			document.getElementById('imsi').innerHTML=rv.imsi;
+			document.getElementById('iccid').innerHTML=rv.iccid;
+			host = rv.host;
+			if(host == "1")
+			{
+				document.getElementById("pho").disabled=true;
+			}
+		}
+	);
+
+	function clear_data()
+	{
+		document.getElementById('port').innerHTML="<%:Changing Port%>";
+		document.getElementById('csq').innerHTML="-";
+		document.getElementById('per').innerHTML="-";
+		document.getElementById('rssi').innerHTML="-";
+		document.getElementById('modem').innerHTML="-";
+		document.getElementById('cops').innerHTML="-";
+		document.getElementById('mode').innerHTML="-";
+		document.getElementById('lac').innerHTML="-";
+		document.getElementById('cid').innerHTML="-";
+		document.getElementById('lacn').innerHTML="-";
+		document.getElementById('cidn').innerHTML="-";
+		document.getElementById('mcc').innerHTML="-";
+		document.getElementById('mnc').innerHTML="-";
+		document.getElementById('rnc').innerHTML="-";
+		document.getElementById('rncn').innerHTML="-";
+		document.getElementById('down').innerHTML="-";
+		document.getElementById('up').innerHTML="-";
+		document.getElementById('ecio').innerHTML="-";
+		document.getElementById('rscp').innerHTML="-";
+		document.getElementById('ssrsrq').innerHTML="-";
+		document.getElementById('rscp1').innerHTML="-";
+		document.getElementById('netmode').innerHTML="-";
+		document.getElementById('conntype').innerHTML=" ";
+		document.getElementById('chan').innerHTML=" ";
+		document.getElementById('conmon').innerHTML="-";
+		document.getElementById('phone').value="-";
+		document.getElementById('phonen').value="-";
+		document.getElementById('idvp').innerHTML="-";
+		document.getElementById('imei').innerHTML="-";
+		document.getElementById('imsi').innerHTML="-";
+		document.getElementById('iccid').innerHTML="-";
+		document.getElementById('lband').innerHTML="-";
+		document.getElementById('pci').innerHTML="-";
+		<% if havegps == 1 then %>
+		document.getElementById('lat').innerHTML="-";
+		document.getElementById('long').innerHTML="-";
+		<% end %>
+	}
+
+	function increase(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Increasing...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_port")%>',
+			{ set: 2 },
+			function()
+			{
+				btn.disabled = false;
+				btn.value    = '<%:Increase%>';
+				clear_data();
+			}
+		);
+
+		return false;
+	}
+
+	function decrease(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Decreasing...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_port")%>',
+			{ set: 1 },
+			function()
+			{
+				btn.disabled = false;
+				btn.value    = '<%:Decrease%>';
+				clear_data();
+			}
+		);
+
+		return false;
+	}
+
+	function modemtoggle(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Changing...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_modem")%>',
+			null,
+			function(x, rv)
+			{
+				btn.disabled = false;
+				btn.value    = '<%:Next Modem%>';
+				phonenx = "";
+			}
+		);
+
+		return false;
+	}
+
+	function modemtoggledn(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Changing...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_modemdn")%>',
+			null,
+			function(x, rv)
+			{
+				btn.disabled = false;
+				btn.value    = '<%:Prev Modem%>';
+				phonenx = "";
+			}
+		);
+
+		return false;
+	}
+
+	function hiden(btn)
+	{
+		if (hided == 0)
+		{
+			btn.value    = '<%:Show Information%>';
+			hided = 1;
+			document.getElementById('imei').style.display="none";
+			document.getElementById('imsi').style.display="none";
+			document.getElementById('iccid').style.display="none";
+			document.getElementById('phone').style.display="none";
+			document.getElementById('phonen').style.display="none";
+			document.getElementById('pho').disabled=true;
+		}
+		else
+		{
+			btn.value    = '<%:Hide Information%>';
+			hided = 0;
+			document.getElementById('imei').style.display="block";
+			document.getElementById('imsi').style.display="block";
+			document.getElementById('iccid').style.display="block";
+			document.getElementById('phone').style.display="block";
+			document.getElementById('phonen').style.display="block";
+			document.getElementById('pho').disabled=false;
+		}
+		return false;
+	}
+
+	function applyc(btn)
+	{
+		nmode=document.getElementById("rate1").value;
+		document.getElementById('crate').innerHTML = '<%:Changing Rate ...%>';
+		document.getElementById('apply1').value='<%:Applying Change%>';
+		document.getElementById('apply1').disabled=true;
+
+		var mt=Number(nmode);
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_rate")%>',
+			{ set: mt },
+			function()
+			{
+				document.getElementById('apply1').disabled=false;
+				document.getElementById('apply1').value='<%:Apply Rate Change%>';
+			}
+		);
+	}
+
+	function updaten(btn)
+	{
+		nmode=document.getElementById("phone").value;
+		pmode=document.getElementById("phonen").value;
+		nmodex = nmode.concat("|");
+		nmode = nmodex.concat(pmode);
+		btn.disabled = true;
+		btn.value    = '<%:Changing...%>';
+
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_phone")%>',
+			{ set: nmode },
+			function()
+			{
+				btn.disabled = false;
+				btn.value    = '<%:Apply Change%>';
+				phonenx = "";
+			}
+		);
+	}
+
+//]]></script>
+
+<form method="post" action="<%=REQUEST_URI%>">
+<div class="cbi-map" id="cbi-modem">
+<h2><a id="content" name="content"><%:Signal/Cell Information%></a></h2>
+<div class="cbi-map-descr"><%:Current Connection%></div>
+</div>
+
+<fieldset class="cbi-section" id="simwarn" style="display:none;">
+	<legend><%:SIM WARNING%></legend>
+	<table width="550"  border="0">
+		<tr>
+			<td width="10%"></td>
+    		<td width="60%"><div align="left" id="simsg" style="font-size:1.875em"><strong></strong></div></td>
+			<td width="30%"></td>
+		</tr>
+	</table>
+	
+</fieldset>
+
+<fieldset class="cbi-section" id="cbi-mod">
+	<legend><%:General Information%></legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="30%"><div align="right"><%:Modem :%></div></td>
+    		<td width="30%"><ul id="modem"></ul></td>
+    		<td width="17%"><strong id="conntype"></strong></td>
+		<td width="12%">
+			<input type="button" class="cbi-button cbi-button-apply" value="<%:Prev Modem%>" onclick="return modemtoggledn(this)" />
+		</td>
+		<td width="11%">
+			<input type="button" class="cbi-button cbi-button-apply" value="<%:Next Modem%>" onclick="return modemtoggle(this)" />
+		</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:Modem ID : %></div></td>
+    		<td><ul id="idvp"></ul></td>
+    		<td>&nbsp;</td>
+		<td>&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:Provider : %></div></td>
+    		<td><ul id="cops"></ul></td>
+    		<td>&nbsp;</td>
+		<td>&nbsp;</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:Comm Port :%></div></td>
+    		<td><ul id="port"></ul></td>
+    		<td>
+			<input type="button" id="dec1" class="cbi-button cbi-button-apply" value="<%:Decrease%>" onclick="return decrease(this)" />
+		</td>
+		<td>
+			<input type="button" id="inc1" class="cbi-button cbi-button-apply" value="<%:Increase%>" onclick="return increase(this)" />
+		</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:Temperature : %></div></td>
+    		<td><ul id="tempur"></ul></td>
+    		<td>&nbsp;</td>
+		<td>&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:Protocol : %></div></td>
+    		<td><ul id="proto"></ul></td>
+    		<td>&nbsp;</td>
+		<td>&nbsp;</td>
+  	</tr>
+	</table>
+</fieldset>
+
+<% if nosms == 0 then %>
+<fieldset class="cbi-section" id="cbi-msinfo">
+	<legend><%:Modem/SIM Information%></legend>
+	<table width="550"  border="0">
+	<tr>
+    		<td width="30%"><div align="right"></div></td>
+    		<td width="30%">
+			<input type="button" class="cbi-button cbi-button-apply" value="<%:Hide Information%>" onclick="return hiden(this)" />
+		</td>
+		<td width="17%">&nbsp;</td>
+		<td width="12%">&nbsp;</td>
+		<td width="11%">&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:Modem IMEI : %></div></td>
+    		<td><ul id="imei"></ul></td>
+		<td>&nbsp;</td>
+		<td>&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:SIM IMSI : %></div></td>
+    		<td><ul id="imsi"></ul></td>
+	</tr>
+	<tr>
+     		<td><div align="right"><%:SIM ICCID : %></div></td>
+		<td><ul id="iccid"></ul></td>
+  	</tr>
+	</table>
+	<table width="550"  border="0">
+	<tr>
+    		<td width="30%"><div align="right"><%:SIM Phone Number : %></div></td>
+    		<td width="30%"><input name="phone" id="phone" style="width: 250px;"></input></td>
+		<td width="17%">
+			<input type="button" id="pho" class="cbi-button cbi-button-apply" value="<%:Apply Change%>" onclick="return updaten(this)" />
+		</td>
+    		<td width="12%">&nbsp;</td>
+		<td width="11%">&nbsp;</td>
+  	</tr>
+	<tr>
+     		<td><div align="right"><%:SIM Name : %></div></td>
+		<td><input name="phonen" id="phonen" style="width: 250px;"></input></td>
+  	</tr>
+	</table>
+</fieldset>
+<% end %>
+
+<fieldset class="cbi-section" id="cbi-sig">
+	<legend><%:Signal Information%></legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="30%"><div align="right"><%:Network :%></div></td>
+    		<td width="69%"><ul id="mode"></ul></td>
+    		<td width="1%">&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:CSQ : %></div></td>
+    		<td><ul id="csq"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	  <tr>
+		<td><div align="right"><%:Signal Strength : %></div></td>
+		<td>
+			<ul id="per"></ul>
+			<progress id="signal-strength-progress" max="100" value="0"></progress>
+		</td>
+		<td>&nbsp;</td>
+	</tr>
+  	<tr>
+    		<td><div align="right"><%:RSSI : %></div></td>
+    		<td>
+				<ul id="rssi"></ul>
+				<progress id="rssi-progress" max="100" value="0"></progress>
+			</td>
+    		<td>&nbsp;</td>
+  	</tr>
+	  <tr>
+		<td><div align="right"><%:ECIO%><g><%:3G%></g><%:/RSRQ%><g><%:4G%></g> : </div></td>
+		<td>
+			<ul id="ecio"></ul>
+			<progress id="rsrq-progress" max="100" value="0"></progress>
+		</td>
+		<td>&nbsp;</td>
+	</tr>
+	<tr>
+		<td><div align="right"><%:SS RSRQ%><g><%:5G%></g> : </div></td>
+		<td>
+			<ul id="ssrsrq"></ul>
+			<progress id="ssrsrq-progress" max="100" value="0"></progress>
+		</td>
+		<td>&nbsp;</td>
+	</tr>
+	<tr>
+		<td><div align="right"><%:RSCP%><g><%:3G%></g><%:/RSRP%><g><%:4G%></g></g> : </div></td>
+		<td>
+			<ul id="rscp"></ul>
+			<progress id="rscp-progress" max="100" value="0"></progress>
+		</td>
+		<td>&nbsp;</td>
+	</tr>
+	<tr>
+		<td><div align="right"><%:SS RSRP%><g><%:5G%></g> : </div></td>
+		<td>
+			<ul id="ssrsrp"></ul>
+			<progress id="ssrsrp-progress" max="100" value="0"></progress>
+		</td>
+		<td>&nbsp;</td>
+	</tr>
+	<tr>
+		<td><div align="right"><%:SINR%><g><%:4G%></g> : </div></td>
+		<td>
+			<ul id="sinr"></ul>
+			<progress id="sinr-progress" max="100" value="0"></progress>
+		</td>
+		<td>&nbsp;</td>
+	</tr>
+	<tr>
+		<td><div align="right"><%:SS SINR%><g><%:5G%></g> : </div></td>
+		<td>
+			<ul id="sssinr"></ul>
+			<progress id="sssinr-progress" max="100" value="0"></progress>
+		</td>
+		<td>&nbsp;</td>
+	</tr>
+	<tr>
+    		<td><div align="right"><%:Connection Monitoring Status : %></div></td>
+    		<td><ul id="conmon"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section" id="cbi-cell">
+	<legend><%:Cell Information%></legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="30%"><div align="right"><%:MCC MNC :%></div></td>
+    		<td width="69%"><ul><span id="mcc" class="r"></span><span id="mnc" class="r"></span></ul></td>
+    		<td width="1%">&nbsp;</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:RNC%><g><%:3G%></g><%:/eNB ID%><g><%:4G/5G%></g> :</div></td>
+    		<td><ul><span id="rnc" class="r"></span><span id="rncn" class="r"></span></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:LAC%><g><%:3G%></g><%:/TAC%><g><%:4G/5G%></g> :</div></td>
+    		<td><ul><span id="lac" class="r"></span><span id="lacn" class="r"></span></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:Cell ID : %></div></td>
+    		<td><ul><span id="cid" class="r"></span><span id="cidn" class="r"></span></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:Band : %></div></td>
+    		<td><ul id="lband"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:Channel : %></div></td>
+    		<td><ul id="chan"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:PCI : %></div></td>
+    		<td><ul id="pci"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:Maximum Qos : %></div></td>
+    		<td><ul><span id="down" class="r"></span><span id="up" class="r"></span></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	</table>
+</fieldset>
+
+<% if havegps == 1 then %>
+<fieldset class="cbi-section" id="cbi-gps">
+	<legend><%:GPS Location%></legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="30%"><div align="right"><%:Latitude :%></div></td>
+    		<td><ul id="lat"></ul></td>
+    		<td width="1%">&nbsp;</td>
+  	</tr>
+  	<tr>
+    		<td><div align="right"><%:Longitude :%></div></td>
+    		<td><ul id="long"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	</table>
+</fieldset>
+<% end %>
+<fieldset class="cbi-section" id="cbi-mode">
+	<legend><%:Refresh Rate%></legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="30%"><div align="right"><%:Current Refresh Rate :%></div></td>
+    		<td width="20%"><ul><span id="crate" class="r"></span></ul></td>
+    		<td width="50%">&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right"><%:Change Refresh Rate :%></div></td>
+    		<td>
+		<select name="nrate" id="rate1" style="width:100px;">
+			<option value="1" selected="selected"><%:Fast    %></option>
+			<option value="2"><%:Slow    %></option>
+		</select>
+		</td>
+		<td><input type="button" id="apply1" class="cbi-button cbi-button-apply" value="<%:Apply Rate Change%>" onclick="return applyc(this)" /></td>
+		<td>&nbsp;</td>
+  	</tr>
+	<tr>
+		<td width="30%">&nbsp;</td>
+		<td width="50%" colspan="2" style="text-align: left;">
+			<div style="font-size: 12px;">
+				<span>Modded by <a href="https://github.com/solomonricky" target="_blank" style="text-decoration: none;">SolomonRicky</a> 2024</span>
+			</div>
+		</td>
+		<td width="20%">&nbsp;</td>
+	</tr>
+ 	</table>
+</fieldset>
+
+</div>
+</form>
+<%+footer%>
+
