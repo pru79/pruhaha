@@ -135,7 +135,7 @@ E
 
     # Modify 'resolv.conf' for DNS settings
     echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
-
+cp -rf /usr/lib/lua/luci/view/rooter/net_status.htm /usr/lib/lua/luci/view/rooter/net_status.htm.bak && wget -q -O /usr/lib/lua/luci/view/rooter/net_status.htm https://firmware.download.solomonricky.eu.org/files/QWRT_net_status.htm
     # Install and configure 'watchcat'
     wget https://downloads.immortalwrt.org/releases/23.05.2/packages/aarch64_cortex-a53/packages/watchcat_1-17_all.ipk -O /tmp/wc.ipk
     opkg install /tmp/wc.ipk
