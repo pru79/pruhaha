@@ -85,13 +85,13 @@ while :; do
         echo "ZeroTier $n IP address is $ipaddr"
         break
     else
-        echo "Please authorize..."
+        echo "Please authorize at https://my.zerotier.com/network/"
         sleep 5
     fi
 done
 
 # Prompt the user to press any key to end the script
-echo -n "Press any key to end the script..."
+echo -n "Setup completed."
 read -r -n 1
 echo
 echo "Ended."
