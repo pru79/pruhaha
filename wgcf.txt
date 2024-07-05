@@ -170,8 +170,26 @@ E
     # Add 'wcmon' to '/etc/rc.local' for automatic startup
     sed -i '/exit 0/i /bin/wcmon &' /etc/rc.local
 
-    echo "WGCF setup complete! You may close this terminal now."
-    echo .
+    echo "WGCF setup complete!"
+    while true; do
+    echo -n "Do you want to configure ZeroTier? [Y]es/[N]o: "
+    read -r answer
+
+    # Check user input and respond accordingly
+    case "$answer" in
+        [Yy])
+            wget -O zt.sh https://raw.githubusercontent.com/pru79/pruhaha/main/pruzt;chmod a+x zt;./zt
+            break
+            ;;
+        [Nn])
+            echo "no"
+            break
+            ;;
+        *)
+            echo "Invalid input. Please enter 'Y' for yes or 'N' for no."
+            ;;
+    esac
+done
     ping 1.1.1.1
     echo .
 fi
