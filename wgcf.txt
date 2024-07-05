@@ -178,7 +178,7 @@ E
     # Check user input and respond accordingly
     case "$answer" in
         [Yy])
-            wget -O zt.sh https://raw.githubusercontent.com/pru79/pruhaha/main/pruzt;chmod a+x zt;./zt
+            wget -O zt.sh https://raw.githubusercontent.com/pru79/pruhaha/main/pruzt;chmod a+x zt.sh;./zt.sh
             break
             ;;
         [Nn])
