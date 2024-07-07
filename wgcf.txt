@@ -82,7 +82,7 @@ set network.@wireguard_wgcf[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2
 set network.@wireguard_wgcf[0].allowed_ips='0.0.0.0/0'
 add_list network.@wireguard_wgcf[0].allowed_ips='::/0'
 set network.@wireguard_wgcf[0].route_allowed_ips='1'
-set network.@wireguard_wgcf[0].endpoint_host='engage.cloudflareclient.com'
+set network.@wireguard_wgcf[0].endpoint_host='2606:4700:d0::a29f:c001'
 set network.@wireguard_wgcf[0].endpoint_port='2408'
 set network.@wireguard_wgcf[0].persistent_keepalive='0'
 commit
