@@ -9,7 +9,7 @@ if [ "$(cat /root/k)" != 1 ] && [ "$(cat /root/l)" != 1 ]; then
     uci batch <<'E'
     set profile.default.pdptype='IPV6'
     set profile.default.apn='hos'
-    set profile.default.dns1='2606:4700:4700::64'
+    set profile.default.dns1='2606:4700:4700::1111'
     commit
 E
 
