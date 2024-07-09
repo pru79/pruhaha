@@ -3,7 +3,7 @@
 
 version_file="/root/.pru/version"
 pru_dir="/root/.pru"
-initial_version="0.01"
+initial_version="0.1"
 current_version="0.02"
 
 # Check if /root/.pru exists
@@ -13,15 +13,15 @@ if [ -d "$pru_dir" ]; then
         # Read version from the version file
         versi=$(cat "$version_file")
     else
-        # Create version file with initial version if it doesn't exist
-        echo "$initial_version" >> "$version_file"
-        versi="$initial_version"
+        # Create version file with current version if it doesn't exist
+        echo "$current_version" >> "$version_file"
+        versi=$(cat "version_file")
     fi
 else
     # Create /root/.pru directory and version file with initial version
     mkdir -p "$pru_dir"
-    echo "$initial_version" >> "$version_file"
-    versi="$initial_version"
+    echo "$current_version" >> "$version_file"
+    versi=$(cat "version_file")
 fi
 echo "Versi terkini: $current_version"
 echo "Versi sedang digunakan: $versi"
