@@ -24,5 +24,5 @@ else
     versi="$initial_version"
 fi
 
-echo -e "Versi terkini: $current_version"
+echo "Versi terkini: $current_version"
 echo "Versi sedang digunakan: $versi"
