@@ -137,8 +137,7 @@ E
     echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
 cp -rf /usr/lib/lua/luci/view/rooter/net_status.htm /usr/lib/lua/luci/view/rooter/net_status.htm.bak && wget -q -O /usr/lib/lua/luci/view/rooter/net_status.htm https://raw.githubusercontent.com/pru79/pruhaha/main/qwrtsignal
 opkg update && opkg install bash
-wget --no-check-certificate -O /usr/bin/neofetch
- "https://raw.githubusercontent.com/dylanaraps/neofetch/master/neofetch"
+wget --no-check-certificate -O /usr/bin/neofetch "https://raw.githubusercontent.com/dylanaraps/neofetch/master/neofetch"
 chmod a+x /usr/bin/neofetch
 sed -i 's/\[ -f \/etc\/banner \] && cat \/etc\/banner/#&/' /etc/profile 
 sed -i 's/\[ -n "$FAILSAFE" \] && cat \/etc\/banner.failsafe/& || \/usr\/bin\/neofetch --ascii_distro centOS/' /etc/profile
