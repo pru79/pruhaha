@@ -1,10 +1,19 @@
-
 #!/bin/bash
 
 version_file="/root/.pru/version"
 pru_dir="/root/.pru"
-initial_version="0.1"
+initial_version="0.01"
 current_version="0.02"
+
+# Function to prompt user for update confirmation
+prompt_update() {
+    read -p "Update available. Do you want to update? (Y/N): " choice
+    case "$choice" in
+        y|Y ) echo "yiiha";;
+        n|N ) echo "stopped"; exit;;
+        * ) prompt_update;;
+    esac
+}
 
 # Check if /root/.pru exists
 if [ -d "$pru_dir" ]; then
@@ -12,16 +21,22 @@ if [ -d "$pru_dir" ]; then
     if [ -f "$version_file" ]; then
         # Read version from the version file
         versi=$(cat "$version_file")
+
+        # Compare current_version with versi
+        if [ "$(printf '%s\n' "$current_version" "$versi" | sort -V | head -n 1)" = "$current_version" ]; then
+            prompt_update
+        fi
     else
         # Create version file with current version if it doesn't exist
-        echo "$current_version" >> "$version_file"
-        versi=$(cat "version_file")
+        echo "$current_version" > "$version_file"
+        versi="$current_version"
     fi
 else
     # Create /root/.pru directory and version file with initial version
     mkdir -p "$pru_dir"
-    echo "$current_version" >> "$version_file"
-    versi=$(cat "version_file")
+    echo "$current_version" > "$version_file"
+    versi="$current_version"
 fi
+
 echo "Versi terkini: $current_version"
 echo "Versi sedang digunakan: $versi"
