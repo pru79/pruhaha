@@ -3,7 +3,7 @@
 version_file="/root/.pru/version"
 pru_dir="/root/.pru"
 initial_version="0.01"
-current_version="0.03"
+current_version="0.02"
 
 # Function to prompt user for update confirmation
 prompt_update() {
@@ -15,15 +15,28 @@ prompt_update() {
     esac
 }
 
+# Function to parse version into major and minor components
+parse_version() {
+    local version=$1
+    major=$(echo "$version" | cut -d. -f1)
+    minor=$(echo "$version" | cut -d. -f2)
+}
+
 # Check if /root/.pru exists
 if [ -d "$pru_dir" ]; then
     # Check if version file exists
     if [ -f "$version_file" ]; then
         # Read version from the version file
         versi=$(cat "$version_file")
+        parse_version "$current_version"
+        current_major=$major
+        current_minor=$minor
+        parse_version "$versi"
+        versi_major=$major
+        versi_minor=$minor
 
-        # Compare current_version with versi
-        if [ "$(printf '%s\n' "$current_version" "$versi" | sort -V | head -n 1)" = "$current_version" ]; then
+        # Compare major and minor versions
+        if [ "$current_major" -gt "$versi_major" ] || [ "$current_major" -eq "$versi_major" -a "$current_minor" -gt "$versi_minor" ]; then
             prompt_update
         fi
     else
