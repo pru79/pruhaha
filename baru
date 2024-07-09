@@ -34,13 +34,11 @@ if [ -d "$pru_dir" ]; then
         parse_version "$versi"
         versi_major=$major
         versi_minor=$minor
-
-        echo "Versi terkini: $current_version"
-        echo "Versi sedang digunakan: $versi"
-
         # Compare major and minor versions
         if [ "$current_major" -gt "$versi_major" ] || [ "$current_major" -eq "$versi_major" -a "$current_minor" -gt "$versi_minor" ]; then
-            prompt_update
+echo "Versi terkini: $current_version"
+        echo "Versi sedang digunakan: $versi"
+prompt_update
         fi
     else
         # Create version file with initial version and set versi
