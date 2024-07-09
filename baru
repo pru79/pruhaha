@@ -23,6 +23,5 @@ else
     echo "$initial_version" >> "$version_file"
     versi="$initial_version"
 fi
-
 echo "Versi terkini: $current_version"
 echo "Versi sedang digunakan: $versi"
