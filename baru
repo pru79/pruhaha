@@ -27,15 +27,17 @@ if [ -d "$pru_dir" ]; then
             prompt_update
         fi
     else
-        # Create version file with current version if it doesn't exist
-        echo "$current_version" > "$version_file"
-        versi="$current_version"
+        # Create version file with initial version and set versi
+        echo "$initial_version" > "$version_file"
+        versi="$initial_version"
     fi
 else
-    # Create /root/.pru directory and version file with initial version
+    # Create /root/.pru directory
     mkdir -p "$pru_dir"
-    echo "$current_version" > "$version_file"
-    versi="$current_version"
+
+    # Create version file with initial version and set versi
+    echo "$initial_version" > "$version_file"
+    versi="$initial_version"
 fi
 
 echo "Versi terkini: $current_version"
