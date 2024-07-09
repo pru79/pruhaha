@@ -3,7 +3,7 @@
 version_file="/root/.pru/version"
 pru_dir="/root/.pru"
 initial_version="0.01"
-current_version="0.02"
+current_version="0.03"
 
 # Function to prompt user for update confirmation
 prompt_update() {
