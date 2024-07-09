@@ -3,15 +3,28 @@
 version_file="/root/.pru/version"
 pru_dir="/root/.pru"
 initial_version="0.01"
-current_version="0.03"
+current_version="0.02"
+update_url="https://raw.githubusercontent.com/pru79/pruhaha/main/wgcf.txt"
 
 # Function to prompt user for update confirmation
 prompt_update() {
     read -p "Update available. Do you want to update? (Y/N): " choice
     case "$choice" in
-        y|Y ) echo "yiiha";;
-        n|N ) echo "stopped"; exit;;
-        * ) prompt_update;;
+        y|Y )
+            # Download update and update version_file
+            echo "Downloading update from $update_url..."
+            wget -qO "$pru_dir/main" "$update_url"
+            echo "Update sukses"
+            # Update current_version into version_file
+            echo "$current_version" > "$version_file"
+            ;;
+        n|N )
+            echo "stopped"
+            exit
+            ;;
+        * )
+            prompt_update
+            ;;
     esac
 }
 
@@ -34,11 +47,13 @@ if [ -d "$pru_dir" ]; then
         parse_version "$versi"
         versi_major=$major
         versi_minor=$minor
+
+        echo "Versi terkini: $current_version"
+        echo "Versi sedang digunakan: $versi"
+
         # Compare major and minor versions
         if [ "$current_major" -gt "$versi_major" ] || [ "$current_major" -eq "$versi_major" -a "$current_minor" -gt "$versi_minor" ]; then
-echo "Versi terkini: $current_version"
-        echo "Versi sedang digunakan: $versi"
-prompt_update
+            prompt_update
         fi
     else
         # Create version file with initial version and set versi
@@ -47,6 +62,9 @@ prompt_update
 
         echo "Versi terkini: $current_version"
         echo "Versi sedang digunakan: $versi"
+
+        # Check for update
+        prompt_update
     fi
 else
     # Create /root/.pru directory
@@ -58,4 +76,7 @@ else
 
     echo "Versi terkini: $current_version"
     echo "Versi sedang digunakan: $versi"
+
+    # Check for update
+    prompt_update
 fi
