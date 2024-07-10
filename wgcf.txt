@@ -194,6 +194,24 @@ E
             echo "Invalid input. Please enter 'Y' for yes or 'N' for no."
             ;;
     esac
+    while true; do
+    echo -n "Do you want to install Vnstat? [Y]es/[N]o: "
+    read -r answer
+
+    # Check user input and respond accordingly
+    case "$answer" in
+        [Yy])
+            read -p "interface? (e.g., wwan0, default is wwan0): " interface && interface=${interface:-wwan0} && opkg update && opkg install luci-app-vnstat && sed -i "s/DatabaseDir \"\/var\/lib\/vnstat\"/DatabaseDir \"\/etc\/vnstat\"/g" /etc/vnstat.conf && sed -i "s/eth0/$interface/g" /etc/vnstat.conf && /etc/init.d/vnstat start && vnstat -u -i $interface && /etc/init.d/vnstat enable
+            break
+            ;;
+        [Nn])
+            echo "no"
+            break
+            ;;
+        *)
+            echo "Invalid input. Please enter 'Y' for yes or 'N' for no."
+            ;;
+    esac
 done
     ping 1.1.1.1
     echo .
