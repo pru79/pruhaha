@@ -1,4 +1,5 @@
 <%+header%>
+<!-- solomon signal meter -->
 <%
 local fs = require "nixio.fs"
 nosms = 1
