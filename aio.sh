@@ -44,7 +44,7 @@ get_vnstat_version() {
 # Function to get vnStat status
 get_vnstat_status() {
     if [ -x "/etc/init.d/vnstat" ]; then
-        vnstat_status=$(/etc/init.d/vnstat status 2>&1)
+        vnstat_status=$(/etc/init.d/vnstat status 2>/dev/null)
         if [[ "$vnstat_status" == *"No such file or directory"* ]]; then
             echo "Not installed"
         elif echo "$vnstat_status" | grep -q "running"; then
