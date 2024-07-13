@@ -146,6 +146,7 @@ E
     check_command "wget net_status.htm"
     
     opkg update
+wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk;opkg install ./t.ipk
     opkg install bash
     check_command "opkg install bash"
     
