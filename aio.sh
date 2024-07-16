@@ -68,16 +68,16 @@ get_vnstat_interfaces() {
 
 # Function to get speedtest version
 get_speedtest_version() {
-if command -V speedtest &> /dev/null; then
-    version=$(speedtest -V 2>&1 | head -n 1 | awk '{print $4}')
-    if [ "$version" == "found" ]; then
-        echo "N/A"
+    if command -v speedtest &> /dev/null; then
+        version=$(speedtest -V 2>&1 | head -n 1 | awk '{print $4}')
+        if [ "$version" == "found" ]; then
+            echo "N/A"
+        else
+            echo "Version: $version"
+        fi
     else
-        echo "Version: $version"
+        echo "N/A"
     fi
-else
-    echo "N/A"
-fi
 }
 
 # Function to refresh menu components
@@ -129,7 +129,7 @@ refresh_menu() {
     # vnStat interfaces
     vnstat_interfaces=$(get_vnstat_interfaces)
 
-speedtest_version=$(get_speedtest_version)
+    speedtest_version=$(get_speedtest_version)
     # Display menu
     cat << EOF
 Menu
@@ -192,7 +192,8 @@ while true; do
                     read -p "Enable ZeroTier? [Y]es/[N]o: " install_zt_choice
                     case "$install_zt_choice" in
                         [Yy])
-                            # Call configure function from zerotier_functions.sh                            configure_zerotier
+                            # Call configure function from zerotier_functions.sh
+                            configure_zerotier
                             break
                             ;;
                         [Nn])
@@ -233,7 +234,8 @@ while true; do
                     read -p "Uninstall Watchcat? [Y]es/[N]o: " uninstall_watchcat_choice
                     case "$uninstall_watchcat_choice" in
                         [Yy])
-                            # Call uninstall function from watchcat_functions.sh                            uninstall_watchcat
+                            # Call uninstall function from watchcat_functions.sh
+                            uninstall_watchcat
                             break
                             ;;
                         [Nn])
@@ -268,7 +270,8 @@ while true; do
                 done
             else
                 while true; do
-                    read -p "Install Vnstat? [Y]es/[N]o: " install_vnstat_choice                    case "$install_vnstat_choice" in
+                    read -p "Install Vnstat? [Y]es/[N]o: " install_vnstat_choice
+                    case "$install_vnstat_choice" in
                         [Yy])
                             # Call install function from vnstat_functions.sh
                             install_vnstat
@@ -284,8 +287,11 @@ while true; do
                 done
             fi
             ;;
+        4)
+            echo "Choice: 4 (Speedtest)"
+            ;;
         *)
-            echo "Invalid choice. Please enter 1, 2, or 3."
+            echo "Invalid choice. Please enter 1, 2, 3, or 4."
             ;;
     esac
 done
