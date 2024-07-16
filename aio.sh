@@ -3,7 +3,7 @@
 # Source the ZeroTier and Watchcat function files
 source zerotier_functions.sh
 source watchcat_functions.sh
-source vnstat_functions.sh  # Assuming you have a vnstat_functions.sh file with install and uninstall functions
+source vnstat_functions.sh
 
 # Function to check Watchcat status
 check_watchcat_status() {
@@ -66,6 +66,20 @@ get_vnstat_interfaces() {
     fi
 }
 
+# Function to get speedtest version
+get_speedtest_version() {
+if command -V speedtest &> /dev/null; then
+    version=$(speedtest -V 2>&1 | head -n 1 | awk '{print $4}')
+    if [ "$version" == "found" ]; then
+        echo "N/A"
+    else
+        echo "Version: $version"
+    fi
+else
+    echo "N/A"
+fi
+}
+
 # Function to refresh menu components
 refresh_menu() {
     clear
@@ -115,6 +129,7 @@ refresh_menu() {
     # vnStat interfaces
     vnstat_interfaces=$(get_vnstat_interfaces)
 
+speedtest_version=$(get_speedtest_version)
     # Display menu
     cat << EOF
 Menu
@@ -140,6 +155,9 @@ cat << EOF
    Status: $vnstat_final_status
    Interfaces: $vnstat_interfaces
    Version: $vnstat_version
+4. Speedtest
+   Status:
+   Version: $speedtest_version
 EOF
 }
 
