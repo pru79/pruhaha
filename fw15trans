@@ -122,6 +122,8 @@ opkg install transmission-daemon transmission-web luci-app-transmission
     echo "Mini DLNA: $(if echo "$status_dlna" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_dlna"; fi)"
     echo "Transmission: $(if echo "$status_trans" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_trans"; fi)"
     echo -e "\033[1;33mProses auto setup Torrent, MiniDLNA & Samba4 siyyyap!\033[0m"
+    echo "Please open http://$(ip a | grep -A 2 'br-lan' | grep inet | awk '{print $2}' | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+'
+):9091 to start managing your Torrent"
 else
     echo "Sila cucuk pendrive dahulu"
 fi
