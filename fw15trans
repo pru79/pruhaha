@@ -30,8 +30,10 @@ if fdisk -l | grep -q '^Disk /dev/sda:'; then
                         echo "No mount point found for $DEVICE"
                     fi
                 fi
-
-                read -p "Storan USB ada isi dikesan, nak teruskan format? \033[1;31mSemua data bakal hilang!\033[0m y/t: " jwp
+echo -e "\033[1;31mSemua data bakal hilang!\033[0m"
+echo -e "\033[1;31mSemua data bakal hilang!\033[0m"
+echo -e "\033[1;31mSemua data bakal hilang!\033[0m"
+                read -p "Storan USB ada isi dikesan, nak teruskan format? y/t: " jwp
                 case $jwp in
                     [yY])
                         umount "$DEVICE"
