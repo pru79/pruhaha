@@ -58,7 +58,7 @@ if fdisk -l | grep -q '^Disk /dev/sda:'; then
                 ;;
         esac
     done
-echo "proceed regardless format or not"
+echo ""
     # Create directory and set up Samba
     mkdir -p "$MOUNT_POINT/dload"
     cat << 'SMB4' > /etc/config/samba4
@@ -82,7 +82,7 @@ SMB4
 
 opkg update
 opkg install transmission-daemon transmission-web luci-app-transmission
-sleep 3;opkg list-installed | grep transmission
+#sleep 3;opkg list-installed | grep transmission
 
     # Check if /etc/config/transmission exists before modifying it
     if [ -f /etc/config/transmission ]; then
