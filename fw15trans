@@ -1,38 +1,44 @@
 #!/bin/sh
-# Start and enable services
-    /etc/init.d/minidlna stop > /dev/null 2>&1
-    /etc/init.d/transmission stop > /dev/null 2>&1
-    /etc/init.d/samba4 stop > /dev/null 2>&1
+
+# Stop and hide outputs of services
+/etc/init.d/minidlna stop > /dev/null 2>&1
+/etc/init.d/transmission stop > /dev/null 2>&1
+/etc/init.d/samba4 stop > /dev/null 2>&1
+
+DEVICE="/dev/sda1"
+MOUNT_POINT="/mnt/sda1"
+
 # Check if /dev/sda is attached
 if fdisk -l | grep -q '^Disk /dev/sda:'; then
     while true; do
         read -p "Storan USB dikesan, nak teruskan? y/t: " answer
         case $answer in
             [yY])
-                # Check if /dev/sda1 is mounted
-                if mount | grep -q '/dev/sda1'; then
-                    mount_point=$(df -h | grep '/dev/sda1' | awk '{print $6}')
+                # Check if /dev/sda1 is mounted and display information
+                if mount | grep -q "$DEVICE"; then
+                    mount_point=$(df -h | grep "$DEVICE" | awk '{print $6}')
                     if [ -n "$mount_point" ]; then
                         total_size=$(fdisk -l /dev/sda | grep '^Disk /dev/sda:' | awk '{print $3}')
-                        echo "File system: $(blkid -o value -s TYPE /dev/sda1)"
+                        fs_type=$(blkid -o value -s TYPE "$DEVICE")
+                        echo "File system: $fs_type"
                         echo "Directory: $mount_point"
                         echo "Listing files in $mount_point:"
                         ls -lah "$mount_point"
                         disk_usage=$(du -sh "$mount_point" | awk '{print $1}')
                         echo "Disk usage of $mount_point: $disk_usage out of total ${total_size}GiB"
                     else
-                        echo "No mount point found for /dev/sda1"
+                        echo "No mount point found for $DEVICE"
                     fi
                 fi
 
-                read -p "Storan USB mengandungi data, teruskan format? Semua data bakal hilang! y/t: " jwp
+                read -p "Storan USB ada isi dikesan, nak teruskan format? Semua data bakal hilang! y/t: " jwp
                 case $jwp in
                     [yY])
-                        umount /dev/sda1
+                        umount "$DEVICE"
                         parted -s /dev/sda mklabel gpt
                         parted -s /dev/sda mkpart primary ext4 0% 100%
-                        mkfs.ext4 -F /dev/sda1
-                        mount -t ext4 /dev/sda1 /mnt/sda1
+                        mkfs.ext4 -F "$DEVICE"
+                        mount -t ext4 "$DEVICE" "$MOUNT_POINT"
                         break
                         ;;
                     [tT])
@@ -54,36 +60,29 @@ if fdisk -l | grep -q '^Disk /dev/sda:'; then
     done
 
     # Create directory and set up Samba
-    mkdir -p /mnt/sda1/dload
+    mkdir -p "$MOUNT_POINT/dload"
     cat << 'SMB4' > /etc/config/samba4
-    config samba
-    option workgroup 'WORKGROUP'
-    option charset 'UTF-8'
-    option description 'Samba on OpenWRT'
-    option disable_spnego 'yes'
+config samba
+option workgroup 'WORKGROUP'
+option charset 'UTF-8'
+option description 'Samba on OpenWRT'
+option disable_spnego 'yes'
 
-    config sambashare
-    option name 'dload'
-    option path '/mnt/sda1/dload'
-    option read_only 'no'
-    option guest_ok 'yes'
-    option create_mask '0777'
-    option dir_mask '0777'
-    option force_root '1'
-    option inherit_owner 'yes'
-    option guest_only 'yes'
+config sambashare
+option name 'dload'
+option path '/mnt/sda1/dload'
+option read_only 'no'
+option guest_ok 'yes'
+option create_mask '0777'
+option dir_mask '0777'
+option force_root '1'
+option inherit_owner 'yes'
+option guest_only 'yes'
 SMB4
 
-    # Install and configure packages
-    opkg update
-    opkg install transmission-daemon transmission-web luci-app-transmission
-    sed -i 's/^\(\s*option enabled \)0/\11/' /etc/config/transmission
-    sed -i "s/^.*option enabled '0'.*$/        option enabled '1'/" /etc/config/minidlna
-    sed -i -e "s|^.*option config_dir.*$|        option config_dir '/etc/transmission'|" \
-           -e "s|^.*option download_dir.*$|        option download_dir '/mnt/sda1/dload'|" \
-           /etc/config/transmission
+    # Check and update /etc/rc.local
     if ! grep -q '/bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local; then
-       sed -i '/exit 0/i /bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local
+        sed -i '/exit 0/i /bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local
     fi
 
     # Start and enable services
