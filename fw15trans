@@ -31,7 +31,7 @@ if fdisk -l | grep -q '^Disk /dev/sda:'; then
                     fi
                 fi
 
-                read -p "Storan USB ada isi dikesan, nak teruskan format? Semua data bakal hilang! y/t: " jwp
+                read -p "Storan USB ada isi dikesan, nak teruskan format? \033[1;31mSemua data bakal hilang!\033[0m y/t: " jwp
                 case $jwp in
                     [yY])
                         umount "$DEVICE"
