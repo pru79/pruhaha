@@ -1,40 +1,33 @@
 #!/bin/sh
-
 # Check if /dev/sda is attached
 if fdisk -l | grep -q '^Disk /dev/sda:'; then
-    while true; do
-        read -p "Storan USB dikesan, nak teruskan format? y/t: " answer
-        case $answer in
-            [yY])
-                # Check if /dev/sda1 is mounted
-                if mount | grep -q '/dev/sda1'; then
-                    # Get the mount point for /dev/sda1
-                    mount_point=$(df -h | grep '/dev/sda1' | awk '{print $6}')
-
-                    # Check if the mount point is not empty
-                    if [ -n "$mount_point" ]; then
-                        # Extract total size in GiB from fdisk output
-                        total_size=$(fdisk -l /dev/sda | grep '^Disk /dev/sda:' | awk '{print $3}')
-
-                        echo "Directory: $mount_point"
-                        echo "Listing files in $mount_point:"
-                        ls -lah "$mount_point"
-                        disk_usage=$(du -sh "$mount_point" | awk '{print $1}')
-                        echo "Disk usage of $mount_point: $disk_usage out of total ${total_size}GiB"
-                    else
-                        echo "No mount point found for /dev/sda1"
-                    fi
-                fi
-                read -p "Storan USB ada isi dikesan, nak teruskan format? y/t: " jwp
-                case $jwp in
-                    [yY])
-                        umount /dev/sda1
-                        parted -s /dev/sda mklabel gpt
-                        parted -s /dev/sda mkpart primary ext4 0% 100%
-                        mkfs.ext4 -F /dev/sda1
-                        mount -t ext4 /dev/sda1 /mnt/sda1
-                        mkdir -p /mnt/sda1/download
-                        cat << 'SMB4' > /etc/config/samba4
+while true; do
+read -p "Storan USB dikesan, nak teruskan format? y/t: " answer
+case $answer in
+[yY])
+if mount | grep -q '/dev/sda1'; then
+mount_point=$(df -h | grep '/dev/sda1' | awk '{print $6}')
+if [ -n "$mount_point" ]; then
+total_size=$(fdisk -l /dev/sda | grep '^Disk /dev/sda:' | awk '{print $3}')
+echo "Directory: $mount_point"
+echo "Listing files in $mount_point:"
+ls -lah "$mount_point"
+disk_usage=$(du -sh "$mount_point" | awk '{print $1}')
+echo "Disk usage of $mount_point: $disk_usage out of total ${total_size}GiB"
+else
+echo "No mount point found for /dev/sda1"
+fi
+fi
+read -p "Storan USB ada isi dikesan, nak teruskan format? y/t: " jwp
+case $jwp in
+[yY])
+umount /dev/sda1
+parted -s /dev/sda mklabel gpt
+parted -s /dev/sda mkpart primary ext4 0% 100%
+mkfs.ext4 -F /dev/sda1
+mount -t ext4 /dev/sda1 /mnt/sda1
+mkdir -p /mnt/sda1/download
+cat << 'SMB4' > /etc/config/samba4
 config samba
 option workgroup 'WORKGROUP'
 option charset 'UTF-8'
@@ -52,45 +45,33 @@ option force_root '1'
 option inherit_owner 'yes'
 option guest_only 'yes'
 SMB4
-                        opkg update
-                        opkg install transmission-daemon transmission-web luci-app-transmission
-                        sed -i 's/^\(\s*option enabled \)0/\11/' /etc/config/transmission
-                        sed -i "s/^.*option enabled '0'.*$/        option enabled '1'/" /etc/config/minidlna
-                        sed -i -e "s|^.*option config_dir.*$|        option config_dir '/etc/transmission'|" \
-                               -e "s|^.*option download_dir.*$|        option download_dir '/mnt/sda1/download'|" \
-                               /etc/config/transmission
-                        sed -i '/exit 0/i /bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local
-                        /etc/init.d/minidlna start
-                        /etc/init.d/minidlna enable
-                        /etc/init.d/transmission start
-                        /etc/init.d/samba4 restart
-                        /etc/init.d/samba4 enable
-                        # Get the statuses
-                        status_dlna=$(/etc/init.d/minidlna status)
-                        status_smb=$(/etc/init.d/samba4 status)
-                        status_trans=$(/etc/init.d/transmission status)
-                        # Check and print service statuses
-                        echo "Samba4: $(if echo "$status_smb" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_smb"; fi)"
-                        echo "Mini DLNA: $(if echo "$status_dlna" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_dlna"; fi)"
-                        echo "Transmission: $(if echo "$status_trans" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_trans"; fi)"
-                        break
-                        ;;
-                    [tT])
-                        break
-                        ;;
-                    *)
-                        echo "Please answer y or t."
-                        ;;
-                esac
-                ;;
-            [tT])
-                break
-                ;;
-            *)
-                echo "Please answer y or t."
-                ;;
-        esac
-    done
+opkg update
+opkg install transmission-daemon transmission-web luci-app-transmission
+sed -i 's/^\(\s*option enabled \)0/\11/' /etc/config/transmission
+sed -i "s/^.*option enabled '0'.*$/        option enabled '1'/" /etc/config/minidlna
+sed -i -e "s|^.*option config_dir.*$|        option config_dir '/etc/transmission'|" -e "s|^.*option download_dir.*$|        option download_dir '/mnt/sda1/download'|" /etc/config/transmission
+sed -i '/exit 0/i /bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local
+/etc/init.d/minidlna start
+/etc/init.d/minidlna enable
+/etc/init.d/transmission start
+/etc/init.d/samba4 restart
+/etc/init.d/samba4 enable
+status_dlna=$(/etc/init.d/minidlna status)
+status_smb=$(/etc/init.d/samba4 status)
+status_trans=$(/etc/init.d/transmission status)
+echo "Samba4: $(if echo "$status_smb" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_smb"; fi)"
+echo "Mini DLNA: $(if echo "$status_dlna" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_dlna"; fi)"
+echo "Transmission: $(if echo "$status_trans" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_trans"; fi)"
+break
+;;
+[tT])
+break
+;;
+*)
+echo "Please answer y or t."
+;;
+esac
+done
 else
-    echo "Sila cucuk pendrive dahulu"
+echo "Sila cucuk pendrive dahulu"
 fi
