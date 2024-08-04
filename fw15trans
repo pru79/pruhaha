@@ -83,6 +83,7 @@ option inherit_owner 'yes'
 option guest_only 'yes'
 SMB4
 
+sed -i 's/^option check_signature/#&/' /etc/opkg.conf
 opkg update
 opkg install transmission-daemon transmission-web luci-app-transmission
 #sleep 3;opkg list-installed | grep transmission
