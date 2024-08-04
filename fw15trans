@@ -1,36 +1,31 @@
 #!/bin/sh
+# Start and enable services
+    /etc/init.d/minidlna stop > /dev/null 2>&1
+    /etc/init.d/transmission stop > /dev/null 2>&1
+    /etc/init.d/samba4 stop > /dev/null 2>&1
 # Check if /dev/sda is attached
 if fdisk -l | grep -q '^Disk /dev/sda:'; then
     while true; do
-        read -p "Storan USB dikesan, nak teruskan format? y/t: " answer
+        read -p "Storan USB dikesan, nak teruskan? y/t: " answer
         case $answer in
             [yY])
+                # Check if /dev/sda1 is mounted
                 if mount | grep -q '/dev/sda1'; then
-                    # Get the mount point for /dev/sda1
                     mount_point=$(df -h | grep '/dev/sda1' | awk '{print $6}')
-
-                    # Check if the mount point is not empty
                     if [ -n "$mount_point" ]; then
-                        # Extract total size in GiB from fdisk output
                         total_size=$(fdisk -l /dev/sda | grep '^Disk /dev/sda:' | awk '{print $3}')
-
+                        echo "File system: $(blkid -o value -s TYPE /dev/sda1)"
                         echo "Directory: $mount_point"
-
-                        # List files in the mount point
                         echo "Listing files in $mount_point:"
                         ls -lah "$mount_point"
-
-                        # Get disk usage of the mount point
                         disk_usage=$(du -sh "$mount_point" | awk '{print $1}')
-
-                        # Format the output
                         echo "Disk usage of $mount_point: $disk_usage out of total ${total_size}GiB"
                     else
                         echo "No mount point found for /dev/sda1"
                     fi
                 fi
 
-                read -p "Storan USB ada isi dikesan, nak teruskan format? y/t: " jwp
+                read -p "Storan USB ada isi dikesan, nak teruskan format? Semua data bakal hilang! y/t: " jwp
                 case $jwp in
                     [yY])
                         umount /dev/sda1
@@ -38,47 +33,10 @@ if fdisk -l | grep -q '^Disk /dev/sda:'; then
                         parted -s /dev/sda mkpart primary ext4 0% 100%
                         mkfs.ext4 -F /dev/sda1
                         mount -t ext4 /dev/sda1 /mnt/sda1
-                        mkdir -p /mnt/sda1/download
-                        cat << 'SMB4' > /etc/config/samba4
-config samba
-option workgroup 'WORKGROUP'
-option charset 'UTF-8'
-option description 'Samba on OpenWRT'
-option disable_spnego 'yes'
-
-config sambashare
-option name 'download'
-option path '/mnt/sda1/download'
-option read_only 'no'
-option guest_ok 'yes'
-option create_mask '0777'
-option dir_mask '0777'
-option force_root '1'
-option inherit_owner 'yes'
-option guest_only 'yes'
-SMB4
-                        opkg update
-                        opkg install transmission-daemon transmission-web luci-app-transmission
-                        sed -i 's/^\(\s*option enabled \)0/\11/' /etc/config/transmission
-                        sed -i "s/^.*option enabled '0'.*$/        option enabled '1'/" /etc/config/minidlna
-                        sed -i -e "s|^.*option config_dir.*$|        option config_dir '/etc/transmission'|" -e "s|^.*option download_dir.*$|        option download_dir '/mnt/sda1/download'|" /etc/config/transmission
-                        sed -i '/exit 0/i /bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local
-                        /etc/init.d/minidlna start
-                        /etc/init.d/minidlna enable
-                        /etc/init.d/transmission start
-                        /etc/init.d/samba4 restart
-                        /etc/init.d/samba4 enable
-                        # Get the statuses
-                        status_dlna=$(/etc/init.d/minidlna status)
-                        status_smb=$(/etc/init.d/samba4 status)
-                        status_trans=$(/etc/init.d/transmission status)
-                        # Check and print service statuses
-                        echo "Samba4: $(if echo "$status_smb" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_smb"; fi)"
-                        echo "Mini DLNA: $(if echo "$status_dlna" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_dlna"; fi)"
-                        echo "Transmission: $(if echo "$status_trans" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_trans"; fi)"
                         break
                         ;;
                     [tT])
+                        echo "Teruskan tanpa perlu format storan USB.."
                         break
                         ;;
                     *)
@@ -87,13 +45,61 @@ SMB4
                 esac
                 ;;
             [tT])
-                break
+                exit 0
                 ;;
             *)
                 echo "Please answer y or t."
                 ;;
         esac
     done
+
+    # Create directory and set up Samba
+    mkdir -p /mnt/sda1/dload
+    cat << 'SMB4' > /etc/config/samba4
+    config samba
+    option workgroup 'WORKGROUP'
+    option charset 'UTF-8'
+    option description 'Samba on OpenWRT'
+    option disable_spnego 'yes'
+
+    config sambashare
+    option name 'dload'
+    option path '/mnt/sda1/dload'
+    option read_only 'no'
+    option guest_ok 'yes'
+    option create_mask '0777'
+    option dir_mask '0777'
+    option force_root '1'
+    option inherit_owner 'yes'
+    option guest_only 'yes'
+SMB4
+
+    # Install and configure packages
+#    opkg update
+#    opkg install transmission-daemon transmission-web luci-app-transmission
+    sed -i 's/^\(\s*option enabled \)0/\11/' /etc/config/transmission
+    sed -i "s/^.*option enabled '0'.*$/        option enabled '1'/" /etc/config/minidlna
+    sed -i -e "s|^.*option config_dir.*$|        option config_dir '/etc/transmission'|" \
+           -e "s|^.*option download_dir.*$|        option download_dir '/mnt/sda1/dload'|" \
+           /etc/config/transmission
+    if ! grep -q '/bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local; then
+       sed -i '/exit 0/i /bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local
+    fi
+
+    # Start and enable services
+    /etc/init.d/minidlna start
+    /etc/init.d/minidlna enable
+    /etc/init.d/transmission start
+    /etc/init.d/samba4 restart
+    /etc/init.d/samba4 enable
+
+    # Check and print service statuses
+    status_dlna=$(/etc/init.d/minidlna status)
+    status_smb=$(/etc/init.d/samba4 status)
+    status_trans=$(/etc/init.d/transmission status)
+    echo "Samba4: $(if echo "$status_smb" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_smb"; fi)"
+    echo "Mini DLNA: $(if echo "$status_dlna" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_dlna"; fi)"
+    echo "Transmission: $(if echo "$status_trans" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_trans"; fi)"
 else
     echo "Sila cucuk pendrive dahulu"
 fi
