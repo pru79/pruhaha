@@ -81,8 +81,8 @@ option guest_only 'yes'
 SMB4
 
     # Install and configure packages (if the lines are commented out, ensure they are installed manually)
-    # opkg update
-    # opkg install transmission-daemon transmission-web luci-app-transmission
+     opkg update
+     opkg install transmission-daemon transmission-web luci-app-transmission
 
     # Check if /etc/config/transmission exists before modifying it
     if [ -f /etc/config/transmission ]; then
