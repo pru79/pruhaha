@@ -36,6 +36,7 @@ echo -e "\033[1;31mSemua data bakal hilang!\033[0m"
                 read -p "Storan USB mengandungi data dikesan, nak teruskan format? y/t: " jwp
                 case $jwp in
                     [yY])
+                        echo -e "\033[1;33mFormatting /dev/sda1..\033[0m"
                         umount "$DEVICE"
                         parted -s /dev/sda mklabel gpt
                         parted -s /dev/sda mkpart primary ext4 0% 100%
@@ -44,7 +45,7 @@ echo -e "\033[1;31mSemua data bakal hilang!\033[0m"
                         break
                         ;;
                     [tT])
-                        echo "Teruskan tanpa perlu format storan USB.."
+                        echo -e "\033[1;33mTeruskan tanpa perlu format storan USB..\033[0m"
                         break
                         ;;
                     *)
@@ -120,6 +121,7 @@ opkg install transmission-daemon transmission-web luci-app-transmission
     echo "Samba4: $(if echo "$status_smb" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_smb"; fi)"
     echo "Mini DLNA: $(if echo "$status_dlna" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_dlna"; fi)"
     echo "Transmission: $(if echo "$status_trans" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_trans"; fi)"
+    echo -e "\033[1;33mProses auto setup Torrent, MiniDLNA & Samba4 siyyyap!\033[0m"
 else
     echo "Sila cucuk pendrive dahulu"
 fi
