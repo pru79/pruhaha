@@ -58,7 +58,7 @@ if fdisk -l | grep -q '^Disk /dev/sda:'; then
                 ;;
         esac
     done
-
+echo "proceed regardless format or not"
     # Create directory and set up Samba
     mkdir -p "$MOUNT_POINT/dload"
     cat << 'SMB4' > /etc/config/samba4
