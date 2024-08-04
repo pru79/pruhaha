@@ -63,7 +63,7 @@ echo -e "\033[1;31mSemua data bakal hilang!\033[0m"
     done
 echo ""
     # Create directory and set up Samba
-    mkdir -p "$MOUNT_POINT/dload"
+    mkdir -p "$MOUNT_POINT/dload";chmod 0777 "$MOUNT_POINT/dload";
     cat << 'SMB4' > /etc/config/samba4
 config samba
 option workgroup 'WORKGROUP'
