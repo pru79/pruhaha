@@ -14,7 +14,7 @@ if fdisk -l | grep -q '^Disk /dev/sda:'; then
         read -p "Storan USB dikesan, nak teruskan? y/t: " answer
         case $answer in
             [yY])
-                # Check if /dev/sda1 is mounted and display information
+                # Check if /dev/sda1 is mounted
                 if mount | grep -q "$DEVICE"; then
                     mount_point=$(df -h | grep "$DEVICE" | awk '{print $6}')
                     if [ -n "$mount_point" ]; then
@@ -80,7 +80,22 @@ option inherit_owner 'yes'
 option guest_only 'yes'
 SMB4
 
-    # Check and update /etc/rc.local
+    # Install and configure packages (if the lines are commented out, ensure they are installed manually)
+    # opkg update
+    # opkg install transmission-daemon transmission-web luci-app-transmission
+
+    # Check if /etc/config/transmission exists before modifying it
+    if [ -f /etc/config/transmission ]; then
+        sed -i 's/^\(\s*option enabled \)0/\11/' /etc/config/transmission
+        sed -i "s/^.*option enabled '0'.*$/        option enabled '1'/" /etc/config/minidlna
+        sed -i -e "s|^.*option config_dir.*$|        option config_dir '/etc/transmission'|" \
+               -e "s|^.*option download_dir.*$|        option download_dir '/mnt/sda1/dload'|" \
+               /etc/config/transmission
+    else
+        echo "Warning: /etc/config/transmission not found. Skipping transmission configuration."
+    fi
+
+    # Ensure /etc/rc.local has the correct commands
     if ! grep -q '/bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local; then
         sed -i '/exit 0/i /bin/rewg;/etc/init.d/transmission restart;/etc/init.d/samba4 restart' /etc/rc.local
     fi
@@ -88,14 +103,18 @@ SMB4
     # Start and enable services
     /etc/init.d/minidlna start
     /etc/init.d/minidlna enable
-    /etc/init.d/transmission start
+    if [ -x /etc/init.d/transmission ]; then
+        /etc/init.d/transmission start
+    else
+        echo "Warning: Transmission service not found."
+    fi
     /etc/init.d/samba4 restart
     /etc/init.d/samba4 enable
 
     # Check and print service statuses
     status_dlna=$(/etc/init.d/minidlna status)
     status_smb=$(/etc/init.d/samba4 status)
-    status_trans=$(/etc/init.d/transmission status)
+    status_trans=$(if [ -x /etc/init.d/transmission ]; then /etc/init.d/transmission status; else echo "Transmission service not found."; fi)
     echo "Samba4: $(if echo "$status_smb" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_smb"; fi)"
     echo "Mini DLNA: $(if echo "$status_dlna" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_dlna"; fi)"
     echo "Transmission: $(if echo "$status_trans" | grep -q "running"; then echo -e "[\e[92mrunning\e[0m]"; else echo "$status_trans"; fi)"
