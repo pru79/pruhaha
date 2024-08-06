@@ -96,7 +96,14 @@ E
 # Create script 'rewg' for WAN recovery
     cat <<'E' >/bin/rewg
     n=0
-    m=0rm -rf wgcf-*
+    m=0
+if [ -f /bin/wgcf ]; then
+    echo "/bin/wgcf exists. Continuing..."
+else
+    echo "/bin/wgcf does not exist. Exiting..."
+    exit 1
+fi
+rm -rf wgcf-*
 # The IPv6 address to ping
 IPV6_ADDRESS="2a00:1098:2b::1"
 
