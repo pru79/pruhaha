@@ -1,0 +1,175 @@
+#!/bin/sh
+
+# Function to check if a command executed successfully
+check_command() {
+    if [ $? -ne 0 ]; then
+        echo "Error: Command failed: $1"
+        exit 1
+    fi
+}
+
+# Check conditions from files 'k' and 'l'
+if [ "$(cat /root/k)" != 1 ] && [ "$(cat /root/l)" != 1 ]; then
+    clear
+    echo "Setup will reboot, please reconnect terminal after reboot to resume WGCF setup"
+
+    # Modify uci settings for initial setup
+    uci batch <<'E'
+    set profile.default.pdptype='IPV6'
+    set profile.default.apn='hos'
+    set profile.default.dns1='1.1.1.1'
+set profile.default.dns2='8.8.8.8'
+set profile.default.dns3='2606:4700:4700::1111'
+set profile.default.dns4='2001:4860:4860::8888'
+    commit
+E
+
+    # Update files 'k' and 'l'
+    echo "1" > /root/k
+    echo "0" > /root/l
+
+    # Run specific commands for setup
+    /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",0'
+    echo "Rebooting Arcadyan.."
+    sleep 10
+    reboot
+else
+    # If conditions are not met, continue with setup
+    echo "1" > /root/l
+
+    echo "Resuming WGCF setup, please wait for 3 minutes.."
+
+    # Wait until IPv6 connection is established
+    while ! ping6 -c 1 2001:4860:4860::8888 >/dev/null 2>&1; do
+        sleep 1
+    done
+
+    echo "IPv6 connection established."
+# Install necessary packages and configure WireGuard
+    if ping6 -c 1 google.com >/dev/null 2>&1; then
+        /etc/init.d/sysntpd restart
+        rm -rf wgcf wgcf.gz /bin/wgcf
+echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
+        wget --no-check-certificate https://raw.githubusercontent.com/pru79/pruhaha/main/wgcf.gz
+        check_command "wget wgcf"
+        gunzip -f wgcf.gz
+        mv wgcf /bin
+        chmod a+x /bin/wgcf
+        sleep 5
+        echo | wgcf register
+        wgcf generate
+
+        # Extract PrivateKey and Address from 'wgcf-profile.conf'
+        p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
+        v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
+
+        # Configure WireGuard interface using uci
+        uci batch <<E
+        set network.wgcf=interface
+        set network.wgcf.proto='wireguard'
+        set network.wgcf.private_key='$p'
+        set network.wgcf.addresses='172.16.0.2/32'
+        add_list network.wgcf.addresses='$v'
+        set network.wgcf.mtu='1200'
+        add network wireguard_wgcf
+        set network.@wireguard_wgcf[0]=wireguard_wgcf
+        set network.@wireguard_wgcf[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='
+        set network.@wireguard_wgcf[0].allowed_ips='0.0.0.0/0'
+        add_list network.@wireguard_wgcf[0].allowed_ips='::/0'
+        set network.@wireguard_wgcf[0].route_allowed_ips='1'
+        set network.@wireguard_wgcf[0].endpoint_host='2606:4700:d0::a29f:c001'
+        set network.@wireguard_wgcf[0].endpoint_port='2408'
+        set network.@wireguard_wgcf[0].persistent_keepalive='0'
+        commit
+E
+
+        # Add 'wgcf' to firewall zone network
+        en=$(uci get firewall.@zone[1].network)
+        for net in $en; do
+            uci add_list firewall.@zone[1].network=$net
+        done
+        uci add_list firewall.@zone[1].network=wgcf
+    fi
+# Commit uci changes and restart WAN6 interface
+    uci commit
+    ifdown wwan0 && sleep 5 && ifup wwan0
+
+    # Wait until WAN connectivity is restored
+    while ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; do
+        sleep 1
+    done
+
+    # Modify 'resolv.conf' for DNS settings
+    echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
+
+# Additional setup steps
+    cp -rf /usr/lib/lua/luci/view/rooter/net_status.htm /usr/lib/lua/luci/view/rooter/net_status.htm.bak
+    wget -q -O /usr/lib/lua/luci/view/rooter/net_status.htm https://raw.githubusercontent.com/pru79/pruhaha/main/qwrtsignal
+    check_command "wget net_status.htm"
+    
+    opkg update
+wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk;opkg install ./t.ipk
+    opkg install bash
+    check_command "opkg install bash"
+    
+    wget --no-check-certificate -O /usr/bin/neofetch "https://raw.githubusercontent.com/dylanaraps/neofetch/master/neofetch"
+    check_command "wget neofetch"
+    chmod a+x /usr/bin/neofetch
+
+    sed -i 's/\[ -f \/etc\/banner \] && cat \/etc\/banner/#&/' /etc/profile
+    sed -i 's/\[ -n "$FAILSAFE" \] && cat \/etc\/banner.failsafe/& || \/usr\/bin\/neofetch --ascii_distro centOS/' /etc/profile
+wget https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-aarch64.tgz;tar vzxf ook*;mv speedtest /bin;chmod +x /bin/speedtest
+    echo "WGCF setup complete!"
+
+    while true; do
+        echo -n "Do you want to configure ZeroTier? [Y]es/[N]o: "
+        read -r answer
+
+        # Check user input and respond accordingly
+        case "$answer" in
+            [Yy])
+                wget -O zt.sh https://raw.githubusercontent.com/pru79/pruhaha/main/pruzt
+                chmod a+x zt.sh
+                ./zt.sh
+                break
+                ;;
+            [Nn])
+                echo "no"
+                break
+                ;;
+            *)
+                echo "Invalid input. Please enter 'Y' for yes or 'N' for no."
+                ;;
+        esac
+    done
+
+    while true; do
+        echo -n "Do you want to install Vnstat? [Y]es/[N]o: "
+        read -r answer
+
+        # Check user input and respond accordingly
+        case "$answer" in
+            [Yy])
+                read -p "interface? (e.g., wwan0, default is wgcf): " interface && interface=${interface:-wgcf}
+                opkg update
+                opkg install luci-app-vnstat
+                sed -i "s/DatabaseDir \"\/var\/lib\/vnstat\"/DatabaseDir \"\/etc\/vnstat\"/g" /etc/vnstat.conf
+                sed -i "s/eth0/$interface/g" /etc/vnstat.conf
+                /etc/init.d/vnstat start
+                vnstat -u -i $interface
+                /etc/init.d/vnstat enable
+                break
+                ;;
+            [Nn])
+                echo "no"
+                break
+                ;;
+            *)
+                echo "Invalid input. Please enter 'Y' for yes or 'N' for no."
+                ;;
+        esac
+    done
+echo "YES" | speedtest
+    ping 1.1.1.1
+    echo "."
+fi
