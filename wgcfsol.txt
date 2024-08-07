@@ -92,7 +92,6 @@ E
     fi
 # Commit uci changes and restart WAN6 interface
     uci commit
-    ifdown wwan0 && sleep 5 && ifup wwan0
 
     # Wait until WAN connectivity is restored
     while ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; do
@@ -106,7 +105,8 @@ E
     cp -rf /usr/lib/lua/luci/view/rooter/net_status.htm /usr/lib/lua/luci/view/rooter/net_status.htm.bak
     wget -q -O /usr/lib/lua/luci/view/rooter/net_status.htm https://raw.githubusercontent.com/pru79/pruhaha/main/qwrtsignal
     check_command "wget net_status.htm"
-    
+
+echo "Updating repository, hold on.."
     opkg update
 wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk;opkg install ./t.ipk
     opkg install bash
