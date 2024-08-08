@@ -86,7 +86,7 @@ sed -i "/option type 'Xray'/a\\
 \\toption wireguard_keepAlive '25'" /etc/config/passwall
 
 /etc/init.d/passwall reload;/etc/init.d/passwall restart
-
+fi
 # Modify 'resolv.conf' for DNS settings
     echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
 
