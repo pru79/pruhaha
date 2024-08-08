@@ -87,7 +87,7 @@ EOF
 \\toption wireguard_keepAlive '25'" /etc/config/passwall
 
         /etc/init.d/passwall reload
-        /etc/init.d.passwall restart
+        /etc/init.d/passwall restart
     fi
 
     # Modify 'resolv.conf' for DNS settings
