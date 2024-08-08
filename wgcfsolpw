@@ -99,7 +99,7 @@ EOF
     wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk
 
     # Modify 'resolv.conf' for DNS settings
-    echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
+    echo -e "search lan\nnameserver 127.0.0.1\nnameserver ::1" > /etc/resolv.conf
 
     opkg install ./t.ipk
     opkg install bash
@@ -121,7 +121,9 @@ EOF
             [Yy])
                 read -p "interface? (e.g., wan, default is wwan0): " interface
                 interface=${interface:-wwan0}
+        echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
                 opkg install luci-app-vnstat
+    echo -e "search lan\nnameserver 127.0.0.1\nnameserver ::1" > /etc/resolv.conf
                 sed -i "s/DatabaseDir \"\/var\/lib\/vnstat\"/DatabaseDir \"\/etc\/vnstat\"/g" /etc/vnstat.conf
                 sed -i "s/eth0/$interface/g" /etc/vnstat.conf
                 /etc/init.d/vnstat start
