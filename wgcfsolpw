@@ -98,7 +98,7 @@ EOF
     wget -q -O /usr/lib/lua/luci/view/rooter/net_status.htm https://raw.githubusercontent.com/pru79/pruhaha/main/qwrtsignal
     check_command "wget net_status.htm"
 
-    echo "Updating repository, hold on.."
+    echo -e "\033[1;33mUpdating repository, hold on..\033[0m"
     opkg update
     wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk
     opkg install ./t.ipk
@@ -112,7 +112,7 @@ EOF
     sed -i 's/\[ -f \/etc\/banner \] && cat \/etc\/banner/#&/' /etc/profile
     sed -i 's/\[ -n "$FAILSAFE" \] && cat \/etc\/banner.failsafe/& || \/usr\/bin\/neofetch --ascii_distro centOS/' /etc/profile
 
-    echo "Passwall WGCF setup complete!"
+    echo -e "\033[1;33mPasswall WGCF setup complete!\033[0m"
 
     while true; do
         echo -n "Do you want to install Vnstat? [Y]es/[N]o: "
