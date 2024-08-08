@@ -24,10 +24,6 @@ if [ "$(cat /root/k)" != "1" ] && [ "$(cat /root/l)" != "1" ]; then
     commit
 EOF
 
-    # Update files 'k' and 'l'
-    echo "1" > /root/k
-    echo "0" > /root/l
-
     # Run specific commands for setup
     /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",2'
     echo "Rebooting Arcadyan.."
@@ -113,6 +109,10 @@ EOF
     sed -i 's/\[ -n "$FAILSAFE" \] && cat \/etc\/banner.failsafe/& || \/usr\/bin\/neofetch --ascii_distro centOS/' /etc/profile
 
     echo "Passwall WGCF setup complete!"
+
+    # Update files 'k' and 'l'
+    echo "1" > /root/k
+    echo "0" > /root/l
 
     while true; do
         echo -n "Do you want to install Vnstat? [Y]es/[N]o: "
