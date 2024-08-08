@@ -23,6 +23,7 @@ EOF
     # Run specific commands for setup
     /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",2'
     echo "Rebooting Arcadyan.."
+echo "k=$(cat /root/k) l=$(cat /root/l)"
     sleep 10
     reboot
 else
