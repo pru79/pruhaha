@@ -35,7 +35,7 @@ EOF
     reboot
 else
 
-    echo "Resuming WGCF setup, please wait for 3 minutes.."
+    echo "Resuming WGCF setup, please wait for 3 minutes.. Pls reconnect to this terminal if your session disconnected"
 
     # Wait until IPv6 connection is established
     while ! ping6 -c 1 2001:4860:4860::8888 >/dev/null 2>&1; do
