@@ -43,7 +43,6 @@ echo "k=$(cat /root/k) l=$(cat /root/l)"
         rm -rf wgcf wgcf.gz /bin/wgcf wgcf-*
         echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
         wget --no-check-certificate https://raw.githubusercontent.com/pru79/pruhaha/main/wgcf.gz
-        check_command "wget wgcf"
         gunzip -f wgcf.gz
         mv wgcf /bin
         chmod a+x /bin/wgcf
