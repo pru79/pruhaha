@@ -121,8 +121,8 @@ EOF
         # Check user input and respond accordingly
         case "$answer" in
             [Yy])
-                read -p "interface? (e.g., wwan0, default is wgcf): " interface
-                interface=${interface:-wgcf}
+                read -p "interface? (e.g., wan, default is wwan0): " interface
+                interface=${interface:-wwan0}
                 opkg update
                 opkg install luci-app-vnstat
                 sed -i "s/DatabaseDir \"\/var\/lib\/vnstat\"/DatabaseDir \"\/etc\/vnstat\"/g" /etc/vnstat.conf
