@@ -111,10 +111,7 @@ EOF
 
     sed -i 's/\[ -f \/etc\/banner \] && cat \/etc\/banner/#&/' /etc/profile
     sed -i 's/\[ -n "$FAILSAFE" \] && cat \/etc\/banner.failsafe/& || \/usr\/bin\/neofetch --ascii_distro centOS/' /etc/profile
-    wget https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-aarch64.tgz
-    tar vzxf ook*
-    mv speedtest /bin
-    chmod +x /bin/speedtest
+
     echo "Passwall WGCF setup complete!"
 
     while true; do
@@ -144,7 +141,7 @@ EOF
                 ;;
         esac
     done
-    echo "YES" | speedtest
+    
     ping6 ipv6.google.com
     echo "."
 fi
