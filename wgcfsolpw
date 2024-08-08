@@ -115,29 +115,7 @@ EOF
     tar vzxf ook*
     mv speedtest /bin
     chmod +x /bin/speedtest
-    echo "WGCF setup complete!"
-
-    while true; do
-        echo -n "Do you want to configure ZeroTier? [Y]es/[N]o: "
-        read -r answer
-
-        # Check user input and respond accordingly
-        case "$answer" in
-            [Yy])
-                wget -O zt.sh https://raw.githubusercontent.com/pru79/pruhaha/main/pruzt
-                chmod a+x zt.sh
-                ./zt.sh
-                break
-                ;;
-            [Nn])
-                echo "no"
-                break
-                ;;
-            *)
-                echo "Invalid input. Please enter 'Y' for yes or 'N' for no."
-                ;;
-        esac
-    done
+    echo "Passwall WGCF setup complete!"
 
     while true; do
         echo -n "Do you want to install Vnstat? [Y]es/[N]o: "
@@ -167,6 +145,6 @@ EOF
         esac
     done
     echo "YES" | speedtest
-    ping 1.1.1.1
+    ping6 ipv6.google.com
     echo "."
 fi
