@@ -11,7 +11,7 @@ check_command() {
 # Check conditions from files 'k' and 'l'
 if [ "$(cat /root/k)" != 1 ] && [ "$(cat /root/l)" != 1 ]; then
     clear
-    echo "Setup will reboot, please reconnect terminal after reboot to resume WGCF setup"
+    echo "Setup will reboot, please reconnect terminal after reboot to resume Passwall WGCF setup"
 
     # Modify uci settings for initial setup
     uci batch <<'E'
@@ -29,7 +29,7 @@ E
     echo "0" > /root/l
 
     # Run specific commands for setup
-    /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",0'
+    /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 'AT+QCFG="usbnet",2'
     echo "Rebooting Arcadyan.."
     sleep 10
     reboot
@@ -59,46 +59,35 @@ echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
         echo | wgcf register
         wgcf generate
 
-        # Extract PrivateKey and Address from 'wgcf-profile.conf'
-        p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
-        v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
+# Extract PrivateKey and Address from 'wgcf-profile.conf'
+p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
+v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
 
-        # Configure WireGuard interface using uci
-        uci batch <<E
-        set network.wgcf=interface
-        set network.wgcf.proto='wireguard'
-        set network.wgcf.private_key='$p'
-        set network.wgcf.addresses='172.16.0.2/32'
-        add_list network.wgcf.addresses='$v'
-        set network.wgcf.mtu='1200'
-        add network wireguard_wgcf
-        set network.@wireguard_wgcf[0]=wireguard_wgcf
-        set network.@wireguard_wgcf[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='
-        set network.@wireguard_wgcf[0].allowed_ips='0.0.0.0/0'
-        add_list network.@wireguard_wgcf[0].allowed_ips='::/0'
-        set network.@wireguard_wgcf[0].route_allowed_ips='1'
-        set network.@wireguard_wgcf[0].endpoint_host='2606:4700:d0::a29f:c001'
-        set network.@wireguard_wgcf[0].endpoint_port='2408'
-        set network.@wireguard_wgcf[0].persistent_keepalive='0'
-        commit
-E
+uci batch << EOF
+set passwall.@global[0].enabled='1'
+set passwall.@global[0].tcp_node='myshunt'
+set passwall.@global[0].udp_node='tcp'
+set passwall.@global[0].dns_mode='nonuse'
+set passwall.@global[0].advanced_log_feature='0'
+commit
+EOF
 
-        # Add 'wgcf' to firewall zone network
-        en=$(uci get firewall.@zone[1].network)
-        for net in $en; do
-            uci add_list firewall.@zone[1].network=$net
-        done
-        uci add_list firewall.@zone[1].network=wgcf
-    fi
-# Commit uci changes and restart WAN6 interface
-    uci commit
+sed -i "/option protocol '_shunt'/d; /option STEAM/d; /option AD/d; /option BT/d; /option Proxy/d; /option Netflix/d; /option OpenAI/d; /option Direct/d; /option default_node/d; /option domainStrategy/d" /etc/config/passwall
 
-    # Wait until WAN connectivity is restored
-    while ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; do
-        sleep 1
-    done
+sed -i "/option type 'Xray'/a\\
+\\toption protocol 'wireguard'\\
+\\toption address '2606:4700:d0::a29f:c001'\\
+\\toption port '2408'\\
+\\toption wireguard_public_key 'bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='\\
+\\toption wireguard_secret_key '$p'\\
+\\tlist wireguard_local_address '172.16.0.2/32'\\
+\\tlist wireguard_local_address '$v'\\
+\\toption wireguard_mtu '1300'\\
+\\toption wireguard_keepAlive '25'" /etc/config/passwall
 
-    # Modify 'resolv.conf' for DNS settings
+/etc/init.d/passwall reload;/etc/init.d/passwall restart
+
+# Modify 'resolv.conf' for DNS settings
     echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
 
 # Additional setup steps
