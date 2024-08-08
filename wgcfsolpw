@@ -90,15 +90,12 @@ EOF
 
     echo "1" > /root/l
 
-    # Modify 'resolv.conf' for DNS settings
-    echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
-
     # Additional setup steps
     cp -rf /usr/lib/lua/luci/view/rooter/net_status.htm /usr/lib/lua/luci/view/rooter/net_status.htm.bak
     wget -q -O /usr/lib/lua/luci/view/rooter/net_status.htm https://raw.githubusercontent.com/pru79/pruhaha/main/qwrtsignal
     check_command "wget net_status.htm"
 
-    echo -e "\033[1;33mUpdating repository, hold on..\033[0m"
+    echo -e "\n\033[1;33mUpdating repository, hold on..\033[0m"
     opkg update
     wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk
     opkg install ./t.ipk
@@ -111,6 +108,9 @@ EOF
 
     sed -i 's/\[ -f \/etc\/banner \] && cat \/etc\/banner/#&/' /etc/profile
     sed -i 's/\[ -n "$FAILSAFE" \] && cat \/etc\/banner.failsafe/& || \/usr\/bin\/neofetch --ascii_distro centOS/' /etc/profile
+
+    # Modify 'resolv.conf' for DNS settings
+    echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
 
     echo -e "\033[1;33mPasswall WGCF setup complete!\033[0m"
 
