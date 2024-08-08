@@ -1,16 +1,8 @@
 #!/bin/sh
-
-# Function to check if a command executed successfully
-check_command() {
-    if [ $? -ne 0 ]; then
-        echo "Error: Command failed: $1"
-        exit 1
-    fi
-}
-
 # Check conditions from files 'k' and 'l'
 if [ "$(cat /root/k)" != "1" ] && [ "$(cat /root/l)" != "1" ]; then
     clear
+echo "k=$(cat /root/k) l=$(cat /root/l)"
     echo "Setup will reboot, please reconnect terminal after reboot to resume Passwall WGCF setup"
 
     # Modify uci settings for initial setup
@@ -35,13 +27,13 @@ EOF
     reboot
 else
 
+echo "k=$(cat /root/k) l=$(cat /root/l)"
     echo -e "Resuming WGCF setup, please wait for 3 minutes..\n\033[1;33mPls reconnect to this terminal if your session disconnected\033[0m"
 
     # Wait until IPv6 connection is established
     while ! ping6 -c 1 2001:4860:4860::8888 >/dev/null 2>&1; do
         sleep 1
     done
-
     echo "IPv6 connection established."
     
     # Install necessary packages and configure WireGuard
