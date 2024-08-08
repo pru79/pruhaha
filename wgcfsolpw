@@ -123,7 +123,6 @@ EOF
             [Yy])
                 read -p "interface? (e.g., wan, default is wwan0): " interface
                 interface=${interface:-wwan0}
-                opkg update
                 opkg install luci-app-vnstat
                 sed -i "s/DatabaseDir \"\/var\/lib\/vnstat\"/DatabaseDir \"\/etc\/vnstat\"/g" /etc/vnstat.conf
                 sed -i "s/eth0/$interface/g" /etc/vnstat.conf
