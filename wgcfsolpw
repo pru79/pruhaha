@@ -9,20 +9,20 @@ check_command() {
 }
 
 # Check conditions from files 'k' and 'l'
-if [ "$(cat /root/k)" != 1 ] && [ "$(cat /root/l)" != 1 ]; then
+if [ "$(cat /root/k)" != "1" ] && [ "$(cat /root/l)" != "1" ]; then
     clear
     echo "Setup will reboot, please reconnect terminal after reboot to resume Passwall WGCF setup"
 
     # Modify uci settings for initial setup
-    uci batch <<'E'
+    uci batch <<'EOF'
     set profile.default.pdptype='IPV6'
     set profile.default.apn='hos'
     set profile.default.dns1='1.1.1.1'
-set profile.default.dns2='8.8.8.8'
-set profile.default.dns3='2606:4700:4700::1111'
-set profile.default.dns4='2001:4860:4860::8888'
+    set profile.default.dns2='8.8.8.8'
+    set profile.default.dns3='2606:4700:4700::1111'
+    set profile.default.dns4='2001:4860:4860::8888'
     commit
-E
+EOF
 
     # Update files 'k' and 'l'
     echo "1" > /root/k
@@ -45,11 +45,12 @@ else
     done
 
     echo "IPv6 connection established."
-# Install necessary packages and configure WireGuard
+    
+    # Install necessary packages and configure WireGuard
     if ping6 -c 1 google.com >/dev/null 2>&1; then
         /etc/init.d/sysntpd restart
         rm -rf wgcf wgcf.gz /bin/wgcf
-echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
+        echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
         wget --no-check-certificate https://raw.githubusercontent.com/pru79/pruhaha/main/wgcf.gz
         check_command "wget wgcf"
         gunzip -f wgcf.gz
@@ -59,11 +60,11 @@ echo "nameserver 2a00:1098:2b::1" >/etc/resolv.conf
         echo | wgcf register
         wgcf generate
 
-# Extract PrivateKey and Address from 'wgcf-profile.conf'
-p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
-v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
+        # Extract PrivateKey and Address from 'wgcf-profile.conf'
+        p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
+        v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
 
-uci batch << EOF
+        uci batch << EOF
 set passwall.@global[0].enabled='1'
 set passwall.@global[0].tcp_node='myshunt'
 set passwall.@global[0].udp_node='tcp'
@@ -72,9 +73,9 @@ set passwall.@global[0].advanced_log_feature='0'
 commit
 EOF
 
-sed -i "/option protocol '_shunt'/d; /option STEAM/d; /option AD/d; /option BT/d; /option Proxy/d; /option Netflix/d; /option OpenAI/d; /option Direct/d; /option default_node/d; /option domainStrategy/d" /etc/config/passwall
+        sed -i "/option protocol '_shunt'/d; /option STEAM/d; /option AD/d; /option BT/d; /option Proxy/d; /option Netflix/d; /option OpenAI/d; /option Direct/d; /option default_node/d; /option domainStrategy/d" /etc/config/passwall
 
-sed -i "/option type 'Xray'/a\\
+        sed -i "/option type 'Xray'/a\\
 \\toption protocol 'wireguard'\\
 \\toption address '2606:4700:d0::a29f:c001'\\
 \\toption port '2408'\\
@@ -85,19 +86,22 @@ sed -i "/option type 'Xray'/a\\
 \\toption wireguard_mtu '1300'\\
 \\toption wireguard_keepAlive '25'" /etc/config/passwall
 
-/etc/init.d/passwall reload;/etc/init.d/passwall restart
-fi
-# Modify 'resolv.conf' for DNS settings
+        /etc/init.d/passwall reload
+        /etc/init.d.passwall restart
+    fi
+
+    # Modify 'resolv.conf' for DNS settings
     echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
 
-# Additional setup steps
+    # Additional setup steps
     cp -rf /usr/lib/lua/luci/view/rooter/net_status.htm /usr/lib/lua/luci/view/rooter/net_status.htm.bak
     wget -q -O /usr/lib/lua/luci/view/rooter/net_status.htm https://raw.githubusercontent.com/pru79/pruhaha/main/qwrtsignal
     check_command "wget net_status.htm"
 
-echo "Updating repository, hold on.."
+    echo "Updating repository, hold on.."
     opkg update
-wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk;opkg install ./t.ipk
+    wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk/luci-app-tinyfm_2.5_all.ipk
+    opkg install ./t.ipk
     opkg install bash
     check_command "opkg install bash"
     
@@ -107,7 +111,10 @@ wget -O t.ipk https://github.com/helmiau/helmiwrt-packages/releases/download/ipk
 
     sed -i 's/\[ -f \/etc\/banner \] && cat \/etc\/banner/#&/' /etc/profile
     sed -i 's/\[ -n "$FAILSAFE" \] && cat \/etc\/banner.failsafe/& || \/usr\/bin\/neofetch --ascii_distro centOS/' /etc/profile
-wget https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-aarch64.tgz;tar vzxf ook*;mv speedtest /bin;chmod +x /bin/speedtest
+    wget https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-aarch64.tgz
+    tar vzxf ook*
+    mv speedtest /bin
+    chmod +x /bin/speedtest
     echo "WGCF setup complete!"
 
     while true; do
@@ -139,7 +146,8 @@ wget https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-aarch64.t
         # Check user input and respond accordingly
         case "$answer" in
             [Yy])
-                read -p "interface? (e.g., wwan0, default is wgcf): " interface && interface=${interface:-wgcf}
+                read -p "interface? (e.g., wwan0, default is wgcf): " interface
+                interface=${interface:-wgcf}
                 opkg update
                 opkg install luci-app-vnstat
                 sed -i "s/DatabaseDir \"\/var\/lib\/vnstat\"/DatabaseDir \"\/etc\/vnstat\"/g" /etc/vnstat.conf
@@ -158,7 +166,7 @@ wget https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-aarch64.t
                 ;;
         esac
     done
-echo "YES" | speedtest
+    echo "YES" | speedtest
     ping 1.1.1.1
     echo "."
 fi
