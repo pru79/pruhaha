@@ -3,16 +3,7 @@ m=0
 n=0
 cat <<'E' >/bin/rewg
 /etc/init.d/watchcat stop
-while [ $n -le 1 ]; do
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 AT+CFUN=0 >/dev/null 2>&1 &&
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CGDCONT=1,\"IPV6\",\"hos\"" >/dev/null 2>&1 &&
-/usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 AT+CFUN=1 >/dev/null 2>&1 &&
-ifup wan && ifup wan1
-sleep 30
-ping6 -c 3 2001:4860:4860::8888
-[ $? -eq 0 ] && /etc/init.d/watchcat start && /etc/init.d/watchcat enable && exit 0
 n=$((n+1))
-done
 while [ $m -le 1 ]; do
 /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CFUN=1,1"
 ifup wan && ifup wan1
