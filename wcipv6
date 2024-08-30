@@ -49,3 +49,4 @@ E
 chmod a+x /bin/wcmon
 /bin/wcmon &
 sed -i '/exit 0/i /bin/wcmon &' /etc/rc.local
+echo "Watchcat IPv6 siap dipasang!"
