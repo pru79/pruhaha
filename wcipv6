@@ -3,15 +3,21 @@ cat <<'E' >/bin/rewg
 #!/bin/sh
 m=0
 n=0
+logger "Stopping watchcat to avoid reconnection process interrupted"
 /etc/init.d/watchcat stop
 while [ $m -le 1 ]; do
+logger "Restarting 5g module to force reconnection"
 /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CFUN=1,1"
+logger "Module restarted, redialing"
 ifup wan && ifup wan1
+logger "Pause 90s to wait dialup completed"
 sleep 90
+logger "Pinging Gugel DNS to verify internet link"
 ping6 -c 3 2001:4860:4860::8888
 [ $? -eq 0 ] && /etc/init.d/watchcat start && /etc/init.d/watchcat enable && exit 0
 m=$((m+1))
 done
+logger "Still no internet after restarting module twice, rebooting Arcadyan"
 echo 1 > /proc/sys/kernel/sysrq
 echo b > /proc/sysrq-trigger
 E
@@ -32,13 +38,16 @@ E
 rm /tmp/wc.ipk
 cat <<'E' >/bin/wcmon
 #!/bin/sh
-/etc/init.d/watchcat stop && /etc/init.d/watchcat disable
 while true; do
+logger "Stopping & disabling watchcat to avoid interruption on internet link healthcheck"
+/etc/init.d/watchcat stop && /etc/init.d/watchcat disable
+logger "Watchcat stopped & disabled"
+logger "Attempt to browse http://example.com"
 curl -s --head http://example.com | grep "200 OK" > /dev/null && /etc/init.d/watchcat start && /etc/init.d/watchcat enable
+logger "Internet browsing healthy, watchcat started & enabled. Pause 1m b4 check again"
 sleep 60
 done
 E
-
 chmod a+x /bin/wcmon
 /bin/wcmon &
 sed -i '/exit 0/i /bin/wcmon &' /etc/rc.local
