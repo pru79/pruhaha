@@ -1,7 +1,8 @@
 #!/bin/sh
+cat <<'E' >/bin/rewg
+#!/bin/sh
 m=0
 n=0
-cat <<'E' >/bin/rewg
 /etc/init.d/watchcat stop
 while [ $m -le 1 ]; do
 /usr/lib/rooter/gcom/gcom-locked /dev/ttyUSB2 run-at.gcom 1 "AT+CFUN=1,1"
