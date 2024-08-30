@@ -1,4 +1,6 @@
 #!/bin/sh
+m=0
+n=0
 cat <<'E' >/bin/rewg
 /etc/init.d/watchcat stop
 while [ $n -le 1 ]; do
