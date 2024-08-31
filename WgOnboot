@@ -1,0 +1,43 @@
+# Create script 'rewg' for WAN recovery
+cat <<'E' >/bin/rewg
+[ -f /bin/wgcf ] || { echo "/bin/wgcf does not exist. Exiting..."; exit 1; }
+echo "/bin/wgcf exists. Continuing..."
+rm -rf wgcf-*
+
+IPV6_ADDRESS="2a00:1098:2b::1"
+check_ping() { ping6 -c 1 -w 2 $IPV6_ADDRESS >/dev/null 2>&1; return $?; }
+
+while ! check_ping; do
+    echo "Ping to $IPV6_ADDRESS failed. Waiting..."
+    sleep 5
+done
+
+echo "nameserver $IPV6_ADDRESS" >/etc/resolv.conf
+echo | wgcf register
+wgcf generate
+
+p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
+v=$(grep -Eo '([0-9a-fA-F:]+/[0-9]+)' wgcf-profile.conf)
+
+uci batch <<E2
+set network.wg0=interface
+set network.wg0.auto='1'
+set network.wg0.proto='wireguard'
+set network.wg0.private_key='$p'
+set network.wg0.addresses='172.16.0.2/32'
+add_list network.wg0.addresses='$v'
+set network.wg0.mtu='1200'
+add network wireguard_wg0
+set network.@wireguard_wg0[0]=wireguard_wg0
+set network.@wireguard_wg0[0].public_key='bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo='
+set network.@wireguard_wg0[0].allowed_ips='0.0.0.0/0'
+add_list network.@wireguard_wg0[0].allowed_ips='::/0'
+set network.@wireguard_wg0[0].route_allowed_ips='1'
+set network.@wireguard_wg0[0].endpoint_host='2606:4700:d0::a29f:c001'
+set network.@wireguard_wg0[0].endpoint_port='2408'
+set network.@wireguard_wg0[0].persistent_keepalive='0'
+commit network
+E2
+ifdown wg0 && sleep 1 && ifup wg0
+E
+chmod +x /bin/rewg; sed -i '/^exit 0/i /bin/rewg' /etc/rc.local
