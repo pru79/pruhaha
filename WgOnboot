@@ -37,5 +37,7 @@ set network.@wireguard_wg0[0].persistent_keepalive='0'
 commit network
 E2
 ifdown wg0 && sleep 1 && ifup wg0
+# Modify 'resolv.conf' for DNS settings
+    echo -e "search lan\nnameserver 127.0.0.1" > /etc/resolv.conf
 E
 chmod +x /bin/rewg; sed -i '/^exit 0/i /bin/rewg' /etc/rc.local
