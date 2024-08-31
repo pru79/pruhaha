@@ -15,10 +15,8 @@ done
 echo "nameserver $IPV6_ADDRESS" >/etc/resolv.conf
 echo | wgcf register
 wgcf generate
-
 p=$(awk -F ' = ' '/PrivateKey/ {print $2}' wgcf-profile.conf)
-v=$(grep -Eo '([0-9a-fA-F:]+/[0-9]+)' wgcf-profile.conf)
-
+v=$(grep -E "^Address = ([0-9a-fA-F:]+/[0-9]+)$" wgcf-profile.conf | grep -Eo '([0-9a-fA-F:]+/[0-9]+)')
 uci batch <<E2
 set network.wg0=interface
 set network.wg0.auto='1'
