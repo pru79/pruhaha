@@ -1,0 +1,2 @@
+#!/bin/sh
+read -p "BOT_TOKEN: " BOT_TOKEN; read -p "CHAT_ID: " CHAT_ID; opkg update; opkg install python3 python3-pip; pip3 install nest_asyncio python-telegram-bot; wget -O /bin/arcabot.py http://surl.li/lzmhro; chmod +x /bin/arcabot.py; sed -i "s/BOT_TOKEN = .*/BOT_TOKEN = '$BOT_TOKEN'/" /bin/arcabot.py; sed -i "s/CHAT_ID = .*/CHAT_ID = $CHAT_ID/" /bin/arcabot.py; sed -i '1i\while ! ping -c 1 -W 1 1.1.1.1; do sleep 5; done\nnohup /usr/bin/python3 /bin/arcabot.py > /root/arcabot.log 2>&1 &' /etc/rc.local; echo -e "\e[1;92mArcaBot installation siyyap!\e[0m"
