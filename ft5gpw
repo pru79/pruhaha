@@ -1,0 +1,43 @@
+#!/bin/sh
+clear
+cat << 'EOF' > vl.sh
+#!/bin/sh
+/etc/init.d/mwan3 stop >/dev/null 2>&1; /etc/init.d/mwan3 disable >/dev/null 2>&1
+#echo "Paste your VLESS configuration below, then press ENTER and Ctrl+D:"
+echo "Sila tepek vless config yg seller bagi pehtu tekan enter dan tekan ctrl+D"
+temp_file=$(mktemp); cat > "$temp_file"
+[ ! -s "$temp_file" ] && { echo "No configuration received. Exiting."; rm "$temp_file"; exit 1; }
+node_name="Vless$((RANDOM % 9000 + 1000))"
+{
+echo "uci set passwall.@global[0].enabled='1'"
+echo "uci set passwall.@global[0].tcp_node='$node_name'"
+echo "uci batch <<'E'"
+awk -v node_name="$node_name" -F '[#@:?&=]' '{
+    for(i=1;i<=NF;i++) {
+        if($i=="host") ws_host=$(i+1);
+        if($i=="path") path=$(i+1);
+        if(i==2) {uuid=$(i); gsub("^//", "", uuid);}
+        if(i==3) address=$(i);
+        if(i==NF) remarks=$(i);
+    }
+}
+END {
+    remarks = remarks " " node_name;
+    print "set passwall." node_name "=nodes\nset passwall." node_name ".remarks='\''" remarks "'\''\n" \
+          "set passwall." node_name ".type='\''Xray'\''\nset passwall." node_name ".protocol='\''vless'\''\n" \
+          "set passwall." node_name ".address='\''" address "'\''\nset passwall." node_name ".port='\''80'\''\n" \
+          "set passwall." node_name ".encryption='\''none'\''\nset passwall." node_name ".uuid='\''" uuid "'\''\n" \
+          "set passwall." node_name ".tls='\''0'\''\nset passwall." node_name ".transport='\''ws'\''\n" \
+          "set passwall." node_name ".ws_host='\''" ws_host "'\''";
+    if (path != "") print "set passwall." node_name ".ws_path='\''" path "'\''";
+}' "$temp_file"
+echo "commit passwall"; echo "E"
+} > vl1
+echo "Jap yer.."
+sh vl1; /etc/init.d/passwall restart
+echo "Ok setel. public ip: "; curl -4 ifconfig.io
+rm "$temp_file"
+EOF
+sh vl.sh
+#Siyyaaaap!
+#
