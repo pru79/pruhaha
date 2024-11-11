@@ -30,6 +30,39 @@ while true; do
         # Get public IP and log online status
         pub_ip=$(curl -s ifconfig.io)
         log_output "$pub_ip - Online, packet loss: $loss_percent%"
-        sleep 360
+# Get the current size of the log file in bytes
+log_size=$(wc -c < /root/pchk.log)
+
+# Check if the file is larger than 5120 bytes (5 KB)
+if [ $log_size -gt 5242880 ]; then
+    # Find the highest number of the existing pchk.*.log.gz files
+    max_num=$(ls /root/pchk.*.log.gz 2>/dev/null | awk -F. '{print $2}' | sort -n | tail -n 1)
+
+    # If max_num is empty, set it to 0 (if no previous log files exist)
+    if [ -z "$max_num" ]; then
+        max_num=0
+    fi
+
+    # Increment the highest number by 1 for the new compressed file
+    new_num=$((max_num + 1))
+
+    # Rename existing log files, shifting them by 1
+    for i in $(seq $max_num -1 1); do
+        mv /root/pchk.$i.log.gz /root/pchk.$((i + 1)).log.gz
+    done
+
+    # Compress the current log file and save it as pchk.1.log.gz
+    gzip -c /root/pchk.log > /root/pchk.1.log.gz
+
+    # Optional: Clear the original log file after compression
+    > /root/pchk.log
+
+    # Delete the oldest compressed log if there are more than 3
+    if [ $(ls /root/pchk.*.log.gz 2>/dev/null | wc -l) -gt 3 ]; then
+        # Remove the oldest file (the one with the highest number)
+        rm /root/pchk.$new_num.log.gz
+    fi
+fi
+sleep 5
     fi
 done
