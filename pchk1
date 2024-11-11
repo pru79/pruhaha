@@ -25,6 +25,7 @@ while true; do
     # Check if packet loss is 80% or more
     if [ "$loss_percent" -ge 80 ]; then
         log_output "Packet loss: $loss_percent%, rebooting"
+        reboot
     else
         # Get public IP and log online status
         pub_ip=$(curl -s ifconfig.io)
