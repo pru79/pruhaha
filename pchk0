@@ -1,0 +1,13 @@
+#!/bin/sh
+
+while true; do
+    # Run httping with 1 ping to check connectivity
+    if httping -c 1 1.1.1.1 > /dev/null 2>&1; then
+        # If successful, run /bin/pchk1
+        /bin/pchk1 &
+        break
+    else
+        # If not successful, wait 5 seconds before retrying
+        sleep 5
+    fi
+done
