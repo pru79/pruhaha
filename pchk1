@@ -1,0 +1,34 @@
+#!/bin/sh
+
+LOGFILE="/root/pchk.log"
+
+log_output() {
+    # Add a timestamp to the message
+    timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+    message="[$timestamp] $1"
+
+    # Log to both the log file and system logger
+    echo "$message" | tee -a "$LOGFILE" | logger
+}
+
+while true; do
+    # Run httping with 5 pings
+    result=$(httping -c 5 1.1.1.1 2>/dev/null | grep -o '[0-9]*\.[0-9]*% failed')
+
+    # Extract the percentage number, defaulting to 0 if extraction fails
+    if echo "$result" | grep -q '[0-9]*\.[0-9]*'; then
+        loss_percent=$(echo "$result" | grep -o '[0-9]*\.[0-9]*' | cut -d. -f1)
+    else
+        loss_percent=0  # Default to 0 if we cannot extract a valid number
+    fi
+
+    # Check if packet loss is 80% or more
+    if [ "$loss_percent" -ge 80 ]; then
+        log_output "Packet loss: $loss_percent%, rebooting"
+    else
+        # Get public IP and log online status
+        pub_ip=$(curl -s ifconfig.io)
+        log_output "$pub_ip - Online, packet loss: $loss_percent%"
+        sleep 360
+    fi
+done
