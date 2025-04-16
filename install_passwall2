@@ -7,8 +7,8 @@ EOF
 wget -O passwall.pub https://master.dl.sourceforge.net/project/openwrt-passwall-build/passwall.pub
 opkg-key add passwall.pub
 opkg update && opkg install --nodeps luci-app-passwall2
-wget https://github.com/pru79/pruhaha/blob/main/xray25.3.31.zip
-unzip xray25.3.31.zip
+wget https://github.com/pru79/pruhaha/raw/refs/heads/main/xray25.3.31.gz
+gunzip xray25.3.31.gz
 cp /usr/bin/xray xray.bak
 cp xray25.3.31 /usr/bin/xray
 /etc/init.d/passwall2 restart
