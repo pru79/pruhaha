@@ -12,3 +12,4 @@ gunzip xray25.3.31.gz
 cp /usr/bin/xray xray.bak
 cp xray25.3.31 /usr/bin/xray
 /etc/init.d/passwall2 restart
+sed -i '/^exit 0/i sleep 15;/etc/init.d/passwall2 restart' /etc/rc.local
