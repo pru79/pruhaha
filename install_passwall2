@@ -14,4 +14,4 @@ cp xray25.3.31 /usr/bin/xray
 uci set passwall2.@global_forwarding[0].tcp_redir_ports='1:65535'
 uci commit passwall2
 /etc/init.d/passwall2 restart
-sed -i '/^exit 0/i sleep 15;/etc/init.d/passwall2 restart' /etc/rc.local
+sed -i '/^exit 0/i sleep 25;/etc/init.d/passwall2 restart' /etc/rc.local
