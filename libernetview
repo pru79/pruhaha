@@ -11,7 +11,7 @@ mkdir -p /usr/lib/lua/luci/view/libernet
 
 #Download .lua
 wget -O /usr/lib/lua/luci/view/libernet/iframe.htm \
-https://raw.githubusercontent.com/Razifadm/libernetDoty/main/View/iframe.htm >/dev/null 2>&1
+https://raw.githubusercontent.com/pru79/pruhaha/refs/heads/main/iframe.htm >/dev/null 2>&1
 
 echo "Download complete"
 echo "Restart webui"
