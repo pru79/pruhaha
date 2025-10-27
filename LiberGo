@@ -1,0 +1,5 @@
+#!/bin/sh
+wget https://raw.githubusercontent.com/pru79/pruhaha/refs/heads/main/dotyPakaRaduLiber
+bash dotyPakaRaduLiber
+sleep 7
+wget
