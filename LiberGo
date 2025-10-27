@@ -1,5 +1,35 @@
 #!/bin/sh
 wget https://raw.githubusercontent.com/pru79/pruhaha/refs/heads/main/dotyPakaRaduLiber
 bash dotyPakaRaduLiber
-sleep 7
-wget
+wget https://raw.githubusercontent.com/pru79/pruhaha/refs/heads/main/libernetview
+bash libernetview
+sh -c 'f=/etc/rc.local; [ -f "$f" ] || touch "$f"; [ -r "$f" ] || exit 1; h=$(head -n1 "$f" 2>/dev/null); case "$h" in "#!/bin/sh -e") : ;; "#!/bin/sh") sed -i "1s|^#!/bin/sh$|#!/bin/sh -e|" "$f" ;; *) sed -i "1i #!/bin/sh -e" "$f" ;; esac; grep -q "^exit 0$" "$f" || printf "\nexit 0\n" >> "$f"
+sed -i "/^exit 0$/i sleep 10\\nifdown wwan0 && ifup wwan0\\nexport LIBERNET_DIR="/root/libernet" && screen -AmdS libernet /root/libernet/bin/service.sh -as\\n/root/libernet/bin/service.sh -ds\\nsleep 3\\n/root/libernet/bin/service.sh -sl\\n" "$f"; chmod +x "$f"'
+uci set network.lan.dns=8.8.8.8
+uci commit
+cat > /root/libernet/bin/config/ssh/Unifi.json <<'EOF'
+{
+"ip": "104.17.148.22",
+"host": "www.speedtest.net",
+"port": 80,
+"username": "userid",
+"password": "SangatSulit",
+"udpgw": {
+"ip": "127.0.0.1",
+"port": 7300
+},
+"enable_http": true,
+"http": {
+"buffer": 32767,
+"ip": "127.0.0.1",
+"port": 9876,
+"info": "HTTP Proxy",
+"payload": "GET /cdn-cgi/trace HTTP/1.1[crlf]Host: [host][crlf][crlf]CF-RAY / HTTP/1.1[crlf]Host:sshws-host-disini[crlf]Upgrade: websocket[crlf]Connection: upgrade[crlf][crlf]",
+"proxy": {
+"ip": "www.speedtest.net",
+"port": 80
+}
+}
+}
+EOF
+echo "Libernet siyyyap!"
