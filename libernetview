@@ -1,19 +1,24 @@
-<%#
-    Template untuk memaparkan Libernet di dalam iframe
-    Laluan: /usr/lib/lua/luci/view/libernet/iframe.htm
-%>
+#!/bin/sh
+echo "setup libernet into Luci-Services"
+echo "Downloading necessary files.."
+echo "Please wait...."
+#Download iframe
+wget -O /usr/lib/lua/luci/controller/libernet.lua \
+https://raw.githubusercontent.com/Razifadm/libernetDoty/main/View/libernet.lua >/dev/null 2>&1
 
-<%+header%>
+#make directory libernet
+mkdir -p /usr/lib/lua/luci/view/libernet
 
-<h2 name="content"><%=translate("Libernet Web Interface")%></h2>
-<div id="libernet_container" style="width: 100%; height: 800px; border: none;">
-    <iframe 
-        id="libernet_iframe" 
-        src="http://192.168.1.1/libernet" 
-        style="width: 100%; height: 100%; border: none;" 
-        frameborder="0">
-        <p><%=translate("Your browser does not support iframes.")%></p>
-    </iframe>
-</div>
+#Download .lua
+wget -O /usr/lib/lua/luci/view/libernet/iframe.htm \
+https://raw.githubusercontent.com/Razifadm/libernetDoty/main/View/iframe.htm >/dev/null 2>&1
 
-<%+footer%>
+echo "Download complete"
+echo "Restart webui"
+
+#restart uhttpd
+/etc/init.d/uhttpd restart
+echo "Done! Libernet can be access"
+echo "Services-Libernet"
+
+rm -f "$0"
