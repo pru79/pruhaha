@@ -9,6 +9,10 @@ sed -i "/^exit 0$/i export LIBERNET_DIR="/root/libernet" && screen -AmdS liberne
 uci set network.lan.dns=8.8.8.8
 uci set network.wan.metric=19
 uci commit
+cat /bin/uninstallLiber <<'EOF'
+rm -rf Downloads/ LiberGo dotyPakaRaduLiber
+EOF
+chmod +x /bin/uninstallLiber
 cat > /bin/libermon <<'EOF'
 #!/bin/sh -e
 URL="https://ifconfig.io/ip"
