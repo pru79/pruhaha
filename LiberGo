@@ -4,9 +4,47 @@ bash dotyPakaRaduLiber
 wget https://raw.githubusercontent.com/pru79/pruhaha/refs/heads/main/libernetview
 bash libernetview
 sh -c 'f=/etc/rc.local; [ -f "$f" ] || touch "$f"; [ -r "$f" ] || exit 1; h=$(head -n1 "$f" 2>/dev/null); case "$h" in "#!/bin/sh -e") : ;; "#!/bin/sh") sed -i "1s|^#!/bin/sh$|#!/bin/sh -e|" "$f" ;; *) sed -i "1i #!/bin/sh -e" "$f" ;; esac; grep -q "^exit 0$" "$f" || printf "\nexit 0\n" >> "$f"
-sed -i "/^exit 0$/i sleep 10\\nifdown wwan0 && ifup wwan0\\nexport LIBERNET_DIR="/root/libernet" && screen -AmdS libernet /root/libernet/bin/service.sh -as\\n/root/libernet/bin/service.sh -ds\\nsleep 3\\n/root/libernet/bin/service.sh -sl\\n" "$f"; chmod +x "$f"'
+sed -i "/^exit 0$/i export LIBERNET_DIR="/root/libernet" && screen -AmdS libernet /root/libernet/bin/service.sh -as\\n/bin/libermon &" "$f"; chmod +x "$f"'
 uci set network.lan.dns=8.8.8.8
+uci set network.wan.metric=19
 uci commit
+cat > /bin/libermon <<'EOF'
+#!/bin/sh -e
+URL="https://ifconfig.io/ip"
+INTERVAL=5
+FAIL_LIMIT=3
+fail_count=0
+log() {
+logger -t libernet-watchdog "$@"
+}
+is_ipv4() {
+echo "$1" | grep -Eq '^[0-9]+.[0-9]+.[0-9]+.[0-9]+$'
+}
+while true; do
+IP="$(curl -4sS --max-time 5 --connect-timeout 10 "$URL" 2>/dev/null | tr -d '\r\n')"
+if [ -n "$IP" ] && is_ipv4 "$IP"; then
+if [ "$fail_count" -gt 0 ]; then
+log "Internet OK: $IP (failure streak reset from $fail_count)"
+fail_count=0
+else
+log "Internet OK: $IP"
+fi
+else
+fail_count=$((fail_count + 1))
+if [ "$fail_count" -lt "$FAIL_LIMIT" ]; then
+log "No public IP (streak $fail_count/$FAIL_LIMIT); waiting..."
+else
+log "No public IP (streak $fail_count/$FAIL_LIMIT); restarting Libernet (lsto -> lsta)"
+/bin/lsto || true
+sleep 1
+/bin/lsta || true
+fail_count=0
+fi
+fi
+sleep "$INTERVAL"
+done
+EOF
+chmod +x /bin/libermon
 cat > /root/libernet/bin/config/ssh/Unifi.json <<'EOF'
 {
 "ip": "104.17.148.22",
