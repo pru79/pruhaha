@@ -80,6 +80,30 @@ cat > /root/libernet/bin/config/ssh/Unifi.json <<'EOF'
 }
 }
 EOF
+cat > /root/libernet/bin/config/ssh/Hotlink.json <<'EOF'
+{
+    "ip": "103.151.12.195",
+    "host": "lanunmyklnet1.ezcode.shop",
+    "port": 80,
+    "username": "username",
+    "password": "password",
+    "udpgw": {
+        "ip": "127.0.0.1",
+        "port": 7300
+    },
+    "enable_http": true,
+    "http": {
+        "buffer": 32767,
+        "ip": "127.0.0.1",
+        "port": 9876,
+        "info": "HTTP Proxy",
+        "payload": "GET /cdn-cgi/trace HTTP/1.1[crlf]Host: mgm.maxis.com.my[crlf][crlf][split]STRX / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf][crlf]",
+        "proxy": {
+            "ip": "genglanun.siteintercept.qualtrics.com",
+            "port": 80
+        }
+    }
+EOF
 ifdown wan;ifup wan
 echo
 echo "#################"
