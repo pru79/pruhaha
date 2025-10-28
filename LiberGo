@@ -1,4 +1,6 @@
 #!/bin/sh
+mkdir LiberBackup
+cp /etc/rc.local LiberBackup
 wget https://raw.githubusercontent.com/pru79/pruhaha/refs/heads/main/dotyPakaRaduLiber
 bash dotyPakaRaduLiber
 opkg install php8-cgi
@@ -10,6 +12,7 @@ uci set network.lan.dns=8.8.8.8
 uci set network.wan.metric=19
 uci commit
 cat > /bin/uninstallLiber <<'EOF'
+cp LiberBackup/rc.local /etc
 rm -rf Downloads/ LiberGo dotyPakaRaduLiber
 EOF
 chmod +x /bin/uninstallLiber
@@ -75,4 +78,8 @@ cat > /root/libernet/bin/config/ssh/Unifi.json <<'EOF'
 }
 }
 EOF
+ifdown wan;ifup wan
+echo.
+echo "#################"
 echo "Libernet siyyyap!"
+echo.
