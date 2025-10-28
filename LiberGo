@@ -79,7 +79,8 @@ cat > /root/libernet/bin/config/ssh/Unifi.json <<'EOF'
 }
 EOF
 ifdown wan;ifup wan
-echo.
+echo
 echo "#################"
 echo "Libernet siyyyap!"
-echo.
+echo "#################"
+echo
