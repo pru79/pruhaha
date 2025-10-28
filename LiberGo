@@ -39,10 +39,10 @@ fail_count=$((fail_count + 1))
 if [ "$fail_count" -lt "$FAIL_LIMIT" ]; then
 log "No public IP (streak $fail_count/$FAIL_LIMIT); waiting..."
 else
-log "No public IP (streak $fail_count/$FAIL_LIMIT); restarting Libernet (lsto -> lsta)"
-/bin/lsto || true
+log "No public IP (streak $fail_count/$FAIL_LIMIT); restarting Libernet"
+/root/libernet/bin/service.sh -ds || true
 sleep 1
-/bin/lsta || true
+/root/libernet/bin/service.sh -sl || true
 fail_count=0
 fi
 fi
