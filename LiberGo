@@ -1,6 +1,8 @@
 #!/bin/sh
+cd /root
 mkdir LiberBackup
 cp /etc/rc.local LiberBackup
+rm -rf Down* Liber* dot*
 wget https://raw.githubusercontent.com/pru79/pruhaha/refs/heads/main/dotyPakaRaduLiber
 bash dotyPakaRaduLiber
 opkg install php8-cgi
