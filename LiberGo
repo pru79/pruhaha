@@ -20,7 +20,7 @@ EOF
 chmod +x /bin/uninstallLiber
 cat > /bin/libermon <<'EOF'
 #!/bin/sh -e
-URL="https://ifconfig.io/ip"
+URL="http://ifconfig.io"
 INTERVAL=5
 FAIL_LIMIT=3
 fail_count=0
@@ -31,7 +31,7 @@ is_ipv4() {
 echo "$1" | grep -Eq '^[0-9]+.[0-9]+.[0-9]+.[0-9]+$'
 }
 while true; do
-IP="$(curl -4sS --max-time 5 --connect-timeout 10 "$URL" 2>/dev/null | tr -d '\r\n')"
+IP="$(curl -4sS --max-time 30 --connect-timeout 30 "$URL" 2>/dev/null | tr -d '\r\n')"
 if [ -n "$IP" ] && is_ipv4 "$IP"; then
 if [ "$fail_count" -gt 0 ]; then
 log "Internet OK: $IP (failure streak reset from $fail_count)"
@@ -46,8 +46,10 @@ log "No public IP (streak $fail_count/$FAIL_LIMIT); waiting..."
 else
 log "No public IP (streak $fail_count/$FAIL_LIMIT); restarting Libernet"
 /root/libernet/bin/service.sh -ds || true
-sleep 1
+ifdown wan;ifup wan
+sleep 15
 /root/libernet/bin/service.sh -sl || true
+sleep 5
 fail_count=0
 fi
 fi
