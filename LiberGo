@@ -20,40 +20,50 @@ EOF
 chmod +x /bin/uninstallLiber
 cat > /bin/libermon <<'EOF'
 #!/bin/sh -e
-URL="http://ifconfig.io"
-INTERVAL=5
-FAIL_LIMIT=3
+
+URL_DOMAIN="www.google.com"    # Stable, known-good domain to resolve [adjust if needed]
+DNS_SERVER="127.0.0.1"         # Query local resolver to avoid third-party reliance
+INTERVAL=5                     # Seconds between checks
+FAIL_LIMIT=3                   # Restart after 3 consecutive failures
+NS_TIMEOUT=1                   # nslookup timeout (seconds)
+
 fail_count=0
+
 log() {
-logger -t libernet-watchdog "$@"
+  logger -t libernet-watchdog "$@"
 }
-is_ipv4() {
-echo "$1" | grep -Eq '^[0-9]+.[0-9]+.[0-9]+.[0-9]+$'
+
+dns_ok() {
+  # Fast DNS health check via local resolver with tight timeout
+  # Success = exit 0 and has an address line
+  # BusyBox nslookup prints to stdout; suppress and use exit code only
+  nslookup -timeout="$NS_TIMEOUT" "$URL_DOMAIN" "$DNS_SERVER" >/dev/null 2>&1
 }
+
 while true; do
-IP="$(curl -4sS --max-time 30 --connect-timeout 30 "$URL" 2>/dev/null | tr -d '\r\n')"
-if [ -n "$IP" ] && is_ipv4 "$IP"; then
-if [ "$fail_count" -gt 0 ]; then
-log "Internet OK: $IP (failure streak reset from $fail_count)"
-fail_count=0
-else
-log "Internet OK: $IP"
-fi
-else
-fail_count=$((fail_count + 1))
-if [ "$fail_count" -lt "$FAIL_LIMIT" ]; then
-log "No public IP (streak $fail_count/$FAIL_LIMIT); waiting..."
-else
-log "No public IP (streak $fail_count/$FAIL_LIMIT); restarting Libernet"
-/root/libernet/bin/service.sh -ds || true
-ifdown wan;ifup wan
-sleep 15
-/root/libernet/bin/service.sh -sl || true
-sleep 5
-fail_count=0
-fi
-fi
-sleep "$INTERVAL"
+  if dns_ok; then
+    if [ "$fail_count" -gt 0 ]; then
+      log "Internet OK via DNS (failure streak reset from $fail_count)"
+      fail_count=0
+    else
+      log "Internet OK via DNS"
+    fi
+  else
+    fail_count=$((fail_count + 1))
+    if [ "$fail_count" -lt "$FAIL_LIMIT" ]; then
+      log "DNS lookup failed (streak $fail_count/$FAIL_LIMIT); waiting..."
+    else
+      log "DNS lookup failed (streak $fail_count/$FAIL_LIMIT); restarting Libernet"
+      /root/libernet/bin/service.sh -ds || true
+      ifdown wan 2>/dev/null || true
+      ifup wan 2>/dev/null || true
+      sleep 15
+      /root/libernet/bin/service.sh -sl || true
+      sleep 5
+      fail_count=0
+    fi
+  fi
+  sleep "$INTERVAL"
 done
 EOF
 chmod +x /bin/libermon
