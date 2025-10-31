@@ -11,8 +11,15 @@ bash libernetview
 sh -c 'f=/etc/rc.local; [ -f "$f" ] || touch "$f"; [ -r "$f" ] || exit 1; h=$(head -n1 "$f" 2>/dev/null); case "$h" in "#!/bin/sh -e") : ;; "#!/bin/sh") sed -i "1s|^#!/bin/sh$|#!/bin/sh -e|" "$f" ;; *) sed -i "1i #!/bin/sh -e" "$f" ;; esac; grep -q "^exit 0$" "$f" || printf "\nexit 0\n" >> "$f"
 sed -i "/^exit 0$/i export LIBERNET_DIR="/root/libernet" && screen -AmdS libernet /root/libernet/bin/service.sh -as\\n/bin/libermon &" "$f"; chmod +x "$f"'
 uci set network.lan.dns=8.8.8.8
-uci set network.wan.metric=19
-uci commit
+if uci -q get network.wan > /dev/null; then
+  uci set network.wan.metric='19'
+elif uci -q get network.wwan0 > /dev/null; then
+  uci set network.wwan0.metric='19'
+else
+  echo "Neither network.wan nor network.wwan0 found"
+  exit 1
+fi
+uci commit network
 cat > /bin/uninstallLiber <<'EOF'
 cp LiberBackup/rc.local /etc
 rm -rf Downloads/ LiberGo dotyPakaRaduLiber
