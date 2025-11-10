@@ -1,0 +1,16 @@
+#!/bin/sh
+rm -rf UmoExp
+# Prompt for UUID and hostvlessws
+read -p "Enter UUID for vless config: " UUID
+read -p "Enter hostvlessws value: " HOSTVLESSWS
+read -p "Enter vlessws path value: " PPP
+
+# Build the URL with user-provided values
+URL="vless://${UUID}@arca.siteintercept.qualtrics.com:80?host=strx-payload%3A%2F%2F${HOSTVLESSWS}%2F${PPP}&path=GET%20%2Fcdn-cgi%2Ftrace%20HTTP%2F1.1%5Bcrlf%5DHost%3A%20mgm.maxis.com.my%5Bcrlf%5D%5Bcrlf%5D%5Bsplit%5DSTRX%20%2F${PPP}%20HTTP%2F1.1%5Bcrlf%5DHost%3A%20%5Bhost%5D%5Bcrlf%5DUpgrade%3A%20websocket%5Bcrlf%5DSec-WebSocket-Key%3A%20K4vEMLAxh27PNePuLDwBAQ%3D%3D%5Bcrlf%5DConnection%3A%20Upgrade%5Bcrlf%5DSec-WebSocket-Version%3A%2013%5Bcrlf%5D%5Bcrlf%5D&type=ws&encryption=none#StrxMaxisExp"
+vless://${UUID}@cdn.opensignal.com:80?host=strx-payload%3A%2F%2F${HOSTVLESSWS}%2F${PPP}&path=GET%20%2Fcdn-cgi%2Ftrace%20HTTP%2F1.1%5Bcrlf%5DHost%3A%20shop.u.com.my%5Bcrlf%5D%5Bcrlf%5D%5Bsplit%5DSTRX%20%2F${PPP}%20HTTP%2F1.1%5Bcrlf%5DHost%3A%20%5Bhost%5D%5Bcrlf%5DUpgrade%3A%20websocket%5Bcrlf%5DSec-WebSocket-Key%3A%20K4vEMLAxh27PNePuLDwBAQ%3D%3D%5Bcrlf%5DConnection%3A%20Upgrade%5Bcrlf%5DSec-WebSocket-Version%3A%2013%5Bcrlf%5D%5Bcrlf%5D&type=ws&encryption=none#StrxUmo
+# Write to the MaxisExp file (adjust path as needed)
+printf '%s
+' "$URL" > UmoExp
+echo -e "######\n"
+echo -e "Vless ws strx anda:\n"
+cat UmoExp
